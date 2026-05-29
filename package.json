@@ -28,6 +28,14 @@
         "balancer",
         "accounts"
     ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/thelioo/opencode-balancer.git"
+    },
+    "bugs": {
+        "url": "https://github.com/thelioo/opencode-balancer/issues"
+    },
+    "homepage": "https://github.com/thelioo/opencode-balancer#readme",
     "license": "MIT",
     "dependencies": {
         "@opencode-ai/plugin": "^1.14.51"
