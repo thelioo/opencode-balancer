@@ -1,0 +1,58 @@
+opencode-balancer installation guide for AI agents
+
+Goal
+Install @thelioo/opencode-balancer as an opencode npm plugin without removing or rewriting the user's existing opencode configuration.
+
+What this plugin does
+opencode-balancer lets opencode users save multiple authenticated accounts per provider, switch active accounts with /balancer commands, and automatically retry with another saved account when the active account is rate-limited.
+
+Important rules
+- Do not run npm install for this plugin. opencode installs npm plugins automatically with Bun at startup.
+- Preserve existing opencode config, plugins, comments, formatting, providers, agents, MCP servers, and permissions whenever possible.
+- Use the singular key "plugin", not "plugins".
+- Add the plugin only if it is not already present.
+- Prefer @thelioo/opencode-balancer@latest for user installs.
+
+Steps
+1. Locate the user's opencode config.
+   - Prefer ~/.config/opencode/opencode.jsonc if it exists.
+   - Otherwise use ~/.config/opencode/opencode.json if it exists.
+   - If neither exists, create ~/.config/opencode/opencode.json with a minimal JSON object.
+
+2. Ensure the config has a top-level plugin array.
+   - If plugin already exists and is an array, keep all existing entries.
+   - If plugin is missing, create it.
+   - If the config is JSONC, keep JSONC syntax valid.
+   - If the config is JSON, keep JSON syntax valid.
+
+3. Add this plugin entry:
+   @thelioo/opencode-balancer@latest
+
+4. Save the config.
+
+5. Show the user the final plugin array.
+
+6. Tell the user to restart opencode.
+
+Expected config shape
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@thelioo/opencode-balancer@latest"]
+}
+
+After restart
+The user can connect and save accounts with:
+/connect anthropic
+/balancer alias work
+
+Useful commands
+/balancer help
+/balancer list
+/balancer status
+/balancer use <provider> <alias>
+/balancer remove <provider> <alias>
+
+Verification
+- Confirm the opencode config contains @thelioo/opencode-balancer@latest in the plugin array.
+- Confirm no existing plugin entries were removed.
+- Remind the user that opencode must be restarted before /balancer becomes available.
