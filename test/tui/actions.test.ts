@@ -104,7 +104,7 @@ describe("tui actions", () => {
         expect(refreshCount()).toBe(1);
     });
 
-    test("activateAccount asks for a provider-filtered model picker when the selected provider differs from the session provider", async () => {
+    test("activateAccount applies the provider model natively when the selected provider changes", async () => {
         const { db, state } = createState();
         saveAccount(db, "github-copilot", "gh1", {
             type: "oauth",
@@ -112,8 +112,9 @@ describe("tui actions", () => {
             access: "access",
             expires: Date.now() + 1000,
         });
+        saveAccount(db, "openai", "work", { type: "api", key: "sk-openai-test" });
         const dispatched: string[] = [];
-        const providerPickers: string[] = [];
+        const appliedProviders: string[] = [];
         const api = {
             client: {
                 auth: {
@@ -129,18 +130,27 @@ describe("tui actions", () => {
 
         await activateAccount(api, state, "github-copilot", "gh1", {
             sessionProviderID: "openai",
-            openProviderModelPicker: (providerID) => providerPickers.push(providerID),
+            applyNativeProviderModel: async (providerID) => {
+                appliedProviders.push(providerID);
+                return true;
+            },
         });
 
         expect(dispatched).toEqual([]);
-        expect(providerPickers).toEqual(["github-copilot"]);
+        expect(appliedProviders).toEqual(["github-copilot"]);
     });
 
-    test("activateAccount still opens the model picker when switching providers even if a model was selected before", async () => {
+    test("activateAccount applies the provider model natively when switching providers even if a model was selected before", async () => {
         const { db, state } = createState();
         saveAccount(db, "openai", "op1", { type: "api", key: "sk-openai-test" });
         setSelectedModel(db, "openai", "gpt-5.5");
-        const providerPickers: string[] = [];
+        saveAccount(db, "github-copilot", "gh1", {
+            type: "oauth",
+            refresh: "refresh",
+            access: "access",
+            expires: Date.now() + 1000,
+        });
+        const appliedProviders: string[] = [];
         const api = {
             client: {
                 auth: {
@@ -151,13 +161,16 @@ describe("tui actions", () => {
 
         await activateAccount(api, state, "openai", "op1", {
             sessionProviderID: "github-copilot",
-            openProviderModelPicker: (providerID) => providerPickers.push(providerID),
+            applyNativeProviderModel: async (providerID) => {
+                appliedProviders.push(providerID);
+                return true;
+            },
         });
 
-        expect(providerPickers).toEqual(["openai"]);
+        expect(appliedProviders).toEqual(["openai"]);
     });
 
-    test("activateAccount opens the model picker even when selecting the current provider again", async () => {
+    test("activateAccount does not apply the provider model natively when selecting the current provider again", async () => {
         const { db, state } = createState();
         saveAccount(db, "github-copilot", "gh1", {
             type: "oauth",
@@ -165,7 +178,7 @@ describe("tui actions", () => {
             access: "access",
             expires: Date.now() + 1000,
         });
-        const providerPickers: string[] = [];
+        const appliedProviders: string[] = [];
         const api = {
             client: {
                 auth: {
@@ -176,10 +189,37 @@ describe("tui actions", () => {
 
         await activateAccount(api, state, "github-copilot", "gh1", {
             sessionProviderID: "github-copilot",
-            openProviderModelPicker: (providerID) => providerPickers.push(providerID),
+            applyNativeProviderModel: async (providerID) => {
+                appliedProviders.push(providerID);
+                return true;
+            },
         });
 
-        expect(providerPickers).toEqual(["github-copilot"]);
+        expect(appliedProviders).toEqual([]);
+    });
+
+    test("activateAccount does not apply the provider model natively when switching accounts inside the selected provider", async () => {
+        const { db, state } = createState();
+        saveAccount(db, "openai", "work", { type: "api", key: "sk-openai-work" });
+        saveAccount(db, "openai", "personal", { type: "api", key: "sk-openai-personal" });
+        const appliedProviders: string[] = [];
+        const api = {
+            client: {
+                auth: {
+                    set: async () => {},
+                },
+            },
+        };
+
+        await activateAccount(api, state, "openai", "work", {
+            sessionProviderID: "github-copilot",
+            applyNativeProviderModel: async (providerID) => {
+                appliedProviders.push(providerID);
+                return true;
+            },
+        });
+
+        expect(appliedProviders).toEqual([]);
     });
 
     test("activateAccount sends the DB-selected account auth instead of stale state auth", async () => {

@@ -1,4 +1,4 @@
-import { getAccount, getActiveAccount, removeAccount, renameAccount, setActiveAccount } from "../core/accounts";
+import { getAccount, getActiveAccount, getSelectedAccount, removeAccount, renameAccount, setActiveAccount } from "../core/accounts";
 import { appendEvent } from "../core/events";
 import { completePendingConnection, removePendingConnection } from "../core/pending";
 import { refreshAccountUsage } from "../core/usage";
@@ -22,7 +22,7 @@ type AuthSetApi = {
 
 type ActivateAccountOptions = {
     sessionProviderID?: string;
-    openProviderModelPicker?: (providerID: string) => void;
+    applyNativeProviderModel?: (providerID: string) => Promise<boolean>;
 };
 
 type ToastApi = {
@@ -49,6 +49,7 @@ export async function activateAccount(
     alias: string,
     options: ActivateAccountOptions = {},
 ) {
+    const previousProviderID = getSelectedAccount(state.db)?.providerID;
     const account = setActiveAccount(state.db, providerID, alias) ?? getActiveAccount(state.db, providerID);
 
     if (account) {
@@ -59,8 +60,11 @@ export async function activateAccount(
     }
 
     state.refresh();
+    const providerChanged = previousProviderID ? previousProviderID !== providerID : options.sessionProviderID !== providerID;
+    if (providerChanged) {
+        await options.applyNativeProviderModel?.(providerID);
+    }
     api.ui?.toast({ variant: "success", message: `Activated ${providerID}/${alias}.` });
-    options.openProviderModelPicker?.(providerID);
 }
 
 export async function refreshUsageForAccount(

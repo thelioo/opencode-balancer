@@ -2,10 +2,13 @@
 
 import type { TuiPlugin, TuiPluginModule, TuiRouteCurrent } from "@opencode-ai/plugin/tui";
 import { createComponent } from "solid-js";
+import { getSelectedModel } from "../core/accounts";
 import { setProviderModel } from "../core/priority";
 import { activateAccount, removeAccountFromTui } from "./actions";
 import { createTuiBalancerBarSync } from "./balancer-bar-sync";
 import { openNativeConnect } from "./connect";
+import { createNativeModelApplier } from "./native-model-apply";
+import { providerModelOptions } from "./provider-models";
 import { createBalancerTuiState } from "./state";
 import { createUsageAutoRefresh } from "./usage-auto-refresh";
 
@@ -41,7 +44,16 @@ const tui: TuiPlugin = async (api) => {
     const state = createBalancerTuiState();
     const usageAutoRefresh = createUsageAutoRefresh(api, state);
     const balancerBarSync = createTuiBalancerBarSync(api, state);
+    const nativeModelApplier = createNativeModelApplier(api);
     let dashboardReturnRoute: TuiRouteCurrent | undefined;
+
+    const applyNativeProviderModel = async (providerID: string) => {
+        const modelOptions = providerModelOptions(api.state.provider, providerID);
+        const selected = getSelectedModel(state.db, providerID);
+        const option = modelOptions.find((item) => item.modelID === selected?.modelID) ?? modelOptions[0];
+        if (!option) return false;
+        return nativeModelApplier({ providerID: option.providerID, modelID: option.modelID }, option.title);
+    };
 
     api.lifecycle.onDispose(() => {
         usageAutoRefresh.dispose();
@@ -130,8 +142,7 @@ const tui: TuiPlugin = async (api) => {
                     activateAccount: (providerID, alias) =>
                         activateAccount(api, state, providerID, alias, {
                             sessionProviderID: inferProviderID(api.state.session.get(value.session_id)),
-                            openProviderModelPicker: (targetProviderID) =>
-                                providerModelDialogModule.openProviderModelDialog(api, state, targetProviderID),
+                            applyNativeProviderModel,
                         }),
                 });
             },
