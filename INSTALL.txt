@@ -7,7 +7,7 @@ What this plugin does
 opencode-balancer lets opencode users save multiple authenticated accounts per provider, manage them from a TUI dashboard, choose provider/model priority, and automatically retry with another healthy account when the active account is rate-limited.
 
 Important rules
-- Do not run npm install for this plugin. opencode installs npm plugins automatically with Bun at startup.
+- Do not run npm install, bun install, or other package install commands for this plugin during user setup. opencode installs npm plugins automatically with Bun at startup.
 - Preserve existing opencode config, TUI config, plugins, comments, formatting, providers, agents, MCP servers, and permissions whenever possible.
 - Use the singular key "plugin", not "plugins".
 - Add the plugin only if it is not already present.
@@ -70,7 +70,7 @@ After restart
 
 2. Tell the user to choose "New account" in the dashboard, or press C, to start opencode's native provider connection flow.
 
-3. Tell the user to complete the provider connection in opencode. The plugin detects the changed provider credentials and saves the account automatically. If the credentials match an existing saved account, the saved account is refreshed instead of duplicated.
+3. Tell the user to complete the provider connection in opencode. The plugin detects the changed provider credentials and saves them from the TUI workflow automatically. If the credentials match an existing saved account, the saved account is refreshed instead of duplicated.
 
 4. Tell the user to open the priority matrix from the dashboard header, or press P, to configure automatic balancing:
    - Press B to turn automatic balancing on or off.
@@ -84,7 +84,7 @@ Security note
 The plugin stores saved provider credentials locally in balancer.sqlite under the opencode config directory, usually ~/.config/opencode/balancer.sqlite or OPENCODE_CONFIG_DIR/balancer.sqlite. Keep this file private and never commit, paste, or share it.
 
 TUI-only workflow
-/balancer opens the Balancer dashboard in the TUI. Account management, provider/model priority, usage, and balancing settings are handled from the TUI only.
+/balancer opens the Balancer dashboard in the TUI. Account management, provider/model priority, supported usage snapshots, and balancing settings are handled from the TUI only.
 
 Verification
 - Confirm the opencode config contains @thelioo/opencode-balancer@latest in the plugin array.

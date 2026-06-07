@@ -13,7 +13,7 @@ _Use multiple accounts and provider/model priorities in opencode, then fail over
 
 </div>
 
-`opencode-balancer` is an [opencode](https://opencode.ai/) plugin that lets you keep several authenticated accounts, choose which provider/model should be used first, and keep working when the current account becomes rate-limited.
+`opencode-balancer` is an [opencode](https://opencode.ai/) server and TUI plugin that lets you keep several authenticated accounts, choose which provider/model should be used first, and keep working when the current account becomes rate-limited.
 
 It integrates with opencode's native provider connection flow. Use the plugin dashboard to connect accounts, inspect usage, switch active accounts, configure provider priority, and enable or disable automatic balancing.
 
@@ -25,7 +25,7 @@ It integrates with opencode's native provider connection flow. Use the plugin da
 - **Multiple accounts per provider**: Save and activate separate accounts for the same provider.
 - **Automatic failover**: Retries with another healthy account after retryable responses such as `429`, `500`, `502`, `503`, `504`, or `529`.
 - **Provider priority matrix**: Choose one model per provider, reorder failover priority, and disable providers from the balancer.
-- **TUI dashboard**: Open a control center from the command palette, `/balancer`, or `Ctrl+B`.
+- **TUI dashboard**: Open a control center from the command palette, `/balancer`, `Ctrl+B`, or the sidebar.
 - **Native connect flow**: Start opencode's provider connection from the dashboard and save the detected account automatically.
 - **Usage snapshots**: Shows per-account usage when the provider exposes supported usage data.
 - **Local credential store**: Saves accounts, usage snapshots, events, and priority settings under your opencode config directory.
@@ -45,7 +45,7 @@ Or read the local guide: [INSTALL.txt](INSTALL.txt).
 
 ### Option B: Manual Setup
 
-Add the plugin to your opencode config:
+Add the plugin to your opencode config so the server hooks can run:
 
 ```json
 {
@@ -54,7 +54,7 @@ Add the plugin to your opencode config:
 }
 ```
 
-Then add the TUI plugin to your opencode TUI config:
+Then add the same plugin to your opencode TUI config so the dashboard can load:
 
 ```json
 {
@@ -63,7 +63,7 @@ Then add the TUI plugin to your opencode TUI config:
 }
 ```
 
-Then restart opencode.
+Then restart opencode. The same package provides both the server hooks and the TUI dashboard.
 
 > [!TIP]
 > No manual `npm install` is required. opencode installs npm plugins automatically with Bun at startup and caches them locally.
@@ -75,7 +75,7 @@ Then restart opencode.
 Open the Balancer dashboard with any of these entry points:
 
 - Press `Ctrl+B`.
-- Run `/balancer` from opencode.
+- Run `/balancer` from opencode to open the dashboard.
 - Open **Open Balancer Dashboard** from the command palette.
 - Click the Balancer dashboard button in the sidebar.
 
@@ -89,12 +89,12 @@ After the provider auth changes, `opencode-balancer` detects the new credentials
 
 ### Manage Accounts
 
-Use the dashboard or sidebar to:
+Use the dashboard and sidebar to:
 
 - Activate an account for a provider.
 - Rename an account.
 - Remove an account after confirmation.
-- View usage snapshots when available.
+- View supported usage snapshots when the provider exposes compatible usage data.
 
 Aliases are normalized to lowercase and may contain letters, numbers, dots, hyphens, and underscores.
 
@@ -115,7 +115,7 @@ When balancing is off, opencode keeps its native provider/model selection. The p
 
 ## TUI Entry Points
 
-`opencode-balancer` is managed entirely from the TUI. Use one of these entry points to open the dashboard:
+`opencode-balancer` is managed from the TUI. Use one of these entry points to open the dashboard:
 
 - `Ctrl+B`
 - `/balancer`
@@ -146,13 +146,21 @@ If `OPENCODE_CONFIG_DIR` is set, the plugin uses that directory instead.
 ## Local Development
 
 ```bash
-npm install
-npm run check
-npm run build
-npm test
+bun install
+bun run check
+bun run build
+bun test
 ```
 
-To test a local checkout with opencode, point your config to the package directory:
+Releases use Changesets:
+
+```bash
+bun run changeset
+bun run version-packages
+bun run release
+```
+
+To test a local checkout with opencode, point your opencode config to the package directory:
 
 ```json
 {
