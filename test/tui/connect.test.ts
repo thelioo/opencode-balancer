@@ -106,6 +106,44 @@ describe("openNativeConnect", () => {
         rmSync(dir, { recursive: true, force: true });
     });
 
+    test("updates an existing native account instead of saving the same oauth account again", async () => {
+        const dir = mkdtempSync(join(tmpdir(), "opencode-balancer-connect-"));
+        const path = join(dir, "balancer.sqlite");
+        const db = openBalancerDatabase(path);
+        migrate(db);
+        const saved = { type: "oauth", refresh: "same-refresh", access: "old-access", expires: 1 } satisfies AuthInfo;
+        const refreshed = { type: "oauth", refresh: "same-refresh", access: "new-access", expires: 2 } satisfies AuthInfo;
+        let firstReads = 0;
+        let secondReads = 0;
+
+        await openNativeConnect({
+            db,
+            readAuth: () => ({ ok: true, auth: firstReads++ === 0 ? {} : { openai: saved } }),
+            generateAlias: () => "first",
+            keymap: {
+                dispatchCommand: async () => undefined,
+            },
+            ui: { toast: () => {} },
+        });
+
+        await openNativeConnect({
+            db,
+            readAuth: () => ({ ok: true, auth: { openai: secondReads++ === 0 ? saved : refreshed } }),
+            generateAlias: () => "second",
+            keymap: {
+                dispatchCommand: async () => undefined,
+            },
+            ui: { toast: () => {} },
+        });
+
+        expect(listAccounts(db, "openai")).toMatchObject([
+            { providerID: "openai", alias: "first", auth: refreshed },
+        ]);
+        expect(getActiveAccount(db, "openai")?.alias).toBe("first");
+        closeBalancerDatabase(path);
+        rmSync(dir, { recursive: true, force: true });
+    });
+
     test("clears native connect progress when no auth is saved", async () => {
         const dir = mkdtempSync(join(tmpdir(), "opencode-balancer-connect-"));
         const path = join(dir, "balancer.sqlite");

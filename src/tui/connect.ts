@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
-import { saveAccount } from "../core/accounts";
+import { listAccounts, saveAccount } from "../core/accounts";
 import { clearNativeConnectInProgress, markNativeConnectInProgress } from "../core/native-connect";
-import { readNativeAuth } from "../server/auth-watcher";
+import { readNativeAuth, sameSavedAuth } from "../server/auth-watcher";
 import type { AuthInfo } from "../core/types";
 
 type NativeAuthReadResult =
@@ -83,7 +83,9 @@ export async function openNativeConnect(api: ConnectApi) {
                 });
                 if (changed) {
                     const [providerID, auth] = changed;
-                    const account = saveAccount(api.db, providerID, uniqueAlias(api.db, providerID, api.generateAlias ?? generatedAlias), auth);
+                    const existing = listAccounts(api.db, providerID).find((candidate) => sameSavedAuth(candidate.auth, auth));
+                    const alias = existing?.alias ?? uniqueAlias(api.db, providerID, api.generateAlias ?? generatedAlias);
+                    const account = saveAccount(api.db, providerID, alias, auth);
                     api.ui?.toast?.({ variant: "success", message: `Saved ${account.providerID}/${account.alias}.` });
                 }
             } finally {

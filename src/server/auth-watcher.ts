@@ -152,7 +152,7 @@ function oauthAccountID(auth: Extract<AuthInfo, { type: "oauth" }>) {
     return typeof accountID === "string" && accountID.length > 0 ? accountID : undefined;
 }
 
-function sameSavedAuth(saved: AuthInfo, current: AuthInfo) {
+export function sameSavedAuth(saved: AuthInfo, current: AuthInfo) {
     if (saved.type !== current.type) return false;
     if (saved.type === "api" && current.type === "api") return saved.key === current.key;
     if (saved.type === "wellknown" && current.type === "wellknown") return saved.key === current.key && saved.token === current.token;
