@@ -10,7 +10,6 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   id-token: write
-  pull-requests: write
 
 jobs:
   release:
@@ -48,21 +47,23 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Version packages
+        run: bun run version
+
+      - name: Commit release version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .changeset CHANGELOG.md package.json bun.lock
+            git commit -m "chore: release package"
+          fi
+
       - name: Build package
         run: bun run build
 
-      - name: Create version PR or publish npm
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: bun run version-packages
-          publish: bun run release
-          createGithubReleases: true
-          title: "chore: release package"
-          commit: "chore: release package"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish npm
+        run: bun run release
 
-      - name: Push release tags
-        if: steps.changesets.outputs.published == 'true'
-        run: git push --follow-tags
+      - name: Push release commit and tags
+        run: git push origin HEAD:main --follow-tags

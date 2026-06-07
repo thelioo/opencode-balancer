@@ -47,8 +47,8 @@
 	"scripts": {
 		"build": "bun scripts/build.ts",
 		"changeset": "changeset",
-		"checktypes": "tsgo --noEmit --project tsconfig.json",
-		"format": "biome format --write src test package.json tsconfig.json tsconfig.build.json",
+		"checktypes": "tsgo --noEmit",
+		"format": "biome format --write",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --fix",
 		"lint:unsafe": "biome check . --fix --unsafe",
@@ -56,7 +56,7 @@
 		"prepublishOnly": "bun run build",
 		"release": "changeset publish",
 		"test": "bun test",
-		"version-packages": "changeset version && bun install --lockfile-only"
+		"version": "changeset version"
 	},
 	"type": "module",
 	"version": "0.1.8"
