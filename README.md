@@ -156,7 +156,7 @@ Releases use Changesets:
 
 ```bash
 bun run changeset
-bun run version-packages
+bun run version
 bun run release
 ```
 

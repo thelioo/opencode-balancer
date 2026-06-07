@@ -13,12 +13,7 @@ describe("release workflow", () => {
 		const packageJson = JSON.parse(read("package.json"));
 
 		expect(packageJson.scripts.changeset).toBe("changeset");
-		expect(packageJson.scripts["version-packages"]).toContain(
-			"changeset version",
-		);
-		expect(packageJson.scripts["version-packages"]).toContain(
-			"bun install --lockfile-only",
-		);
+		expect(packageJson.scripts.version).toContain("changeset version");
 		expect(packageJson.scripts.release).toBe("changeset publish");
 		expect(packageJson.devDependencies["@changesets/cli"]).toBeString();
 	});
@@ -31,7 +26,7 @@ describe("release workflow", () => {
 		expect(config.updateInternalDependencies).toBe("patch");
 	});
 
-	test("workflow creates version PRs, publishes npm, tags, and GitHub releases", () => {
+	test("workflow versions and publishes npm directly from main", () => {
 		const workflow = read(".github/workflows/release.yml");
 
 		expect(workflow).toContain("name: Release");
@@ -43,16 +38,16 @@ describe("release workflow", () => {
 		expect(workflow).toContain("oven-sh/setup-bun@v2");
 		expect(workflow).toContain("npm install --global npm@latest");
 		expect(workflow).toContain("bun install --frozen-lockfile");
-		expect(workflow).toContain("changesets/action@v1");
-		expect(workflow).toContain("publish: bun run release");
-		expect(workflow).toContain("createGithubReleases: true");
+		expect(workflow).toContain("bun run version");
+		expect(workflow).toContain("bun run release");
+		expect(workflow).not.toContain("changesets/action@v1");
+		expect(workflow).not.toContain("pull-requests: write");
 		expect(workflow).toContain("NPM_CONFIG_PROVENANCE: true");
 		expect(workflow).not.toContain("NPM_TOKEN");
 		expect(workflow).toContain("bun run checktypes");
 		expect(workflow).toContain("bun run test");
 		expect(workflow).toContain("bun run build");
-		expect(workflow).toContain("git push --follow-tags");
+		expect(workflow).toContain("git push origin HEAD:main --follow-tags");
 		expect(workflow).not.toContain("gh release create");
-		expect(workflow).toContain("steps.changesets.outputs.published == 'true'");
 	});
 });
