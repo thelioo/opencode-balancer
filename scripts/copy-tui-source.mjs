@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,7 +22,16 @@ function copyTuiSource(sourceDir, targetDir) {
         if (!/\.tsx?$/.test(entry)) continue;
         mkdirSync(dirname(targetPath), { recursive: true });
         copyFileSync(sourcePath, targetPath);
+
+        if (/\.tsx$/.test(entry) && entry !== "tui.tsx") {
+            rmGeneratedFile(targetPath.replace(/\.tsx$/, ".js"));
+            rmGeneratedFile(targetPath.replace(/\.tsx$/, ".js.map"));
+        }
     }
+}
+
+function rmGeneratedFile(path) {
+    if (existsSync(path)) rmSync(path);
 }
 
 copyTuiSource(sourceRoot, targetRoot);
