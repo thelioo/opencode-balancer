@@ -94,6 +94,7 @@ describe("auth watcher", () => {
 		});
 		const watcher = __testCreateAuthWatcher({
 			db: database,
+			isSuppressed: () => false,
 			readAuth: () => {
 				readCalls++;
 				return { auth: { openai: auth }, ok: true };
@@ -189,6 +190,7 @@ describe("auth watcher", () => {
 				throw new Error("insert failed");
 			},
 			db: database,
+			isSuppressed: () => false,
 			readAuth: () => ({ auth: { openai: auth }, ok: true }),
 		});
 
