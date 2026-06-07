@@ -4,7 +4,7 @@ Goal
 Install @thelioo/opencode-balancer as an opencode npm plugin without removing or rewriting the user's existing opencode configuration.
 
 What this plugin does
-opencode-balancer lets opencode users save multiple authenticated accounts per provider, switch active accounts with /balancer commands, and automatically retry with another saved account when the active account is rate-limited.
+opencode-balancer lets opencode users save multiple authenticated accounts per provider, switch active accounts from the Balancer TUI sidebar/dashboard, and automatically retry with another saved account when the active account is rate-limited.
 
 Important rules
 - Do not run npm install for this plugin. opencode installs npm plugins automatically with Bun at startup.
@@ -41,18 +41,27 @@ Expected config shape
 }
 
 After restart
-The user can connect and save accounts with:
-/connect anthropic
-/balancer alias work
+1. Tell the user to run opencode's native connect flow:
+   /connect <provider>
 
-Useful commands
+2. Tell the user to use the Balancer TUI modal/sidebar to save the detected pending connection with an alias.
+
+3. If the Balancer dashboard is not visible, tell the user to open it from the opencode command palette.
+
+4. Remind the user to restart opencode after any later config changes.
+
+Security note
+The plugin stores saved provider credentials locally in balancer.sqlite under the opencode config directory, usually ~/.config/opencode/balancer.sqlite or OPENCODE_CONFIG_DIR/balancer.sqlite. Keep this file private and never commit, paste, or share it.
+
+Fallback commands
+/balancer commands are compatibility and troubleshooting fallbacks. Alias creation is handled by the TUI pending-connection flow.
 /balancer help
 /balancer list
 /balancer status
 /balancer use <provider> <alias>
-/balancer remove <provider> <alias>
+/balancer active <provider>
 
 Verification
 - Confirm the opencode config contains @thelioo/opencode-balancer@latest in the plugin array.
 - Confirm no existing plugin entries were removed.
-- Remind the user that opencode must be restarted before /balancer becomes available.
+- Remind the user that opencode must be restarted before the plugin UI and fallback commands become available.

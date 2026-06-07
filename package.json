@@ -9,6 +9,10 @@
         ".": {
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
+        },
+        "./tui": {
+            "types": "./dist/tui/tui.d.ts",
+            "default": "./dist/tui/tui.tsx"
         }
     },
     "files": [
@@ -18,8 +22,9 @@
         "LICENSE"
     ],
     "scripts": {
-        "build": "tsc --project tsconfig.json",
+        "build": "tsc --project tsconfig.json && node scripts/copy-tui-source.mjs",
         "check": "tsc --noEmit --project tsconfig.json",
+        "test": "bun test",
         "prepublishOnly": "npm run build"
     },
     "keywords": [
@@ -38,7 +43,9 @@
     "homepage": "https://github.com/thelioo/opencode-balancer#readme",
     "license": "MIT",
     "dependencies": {
-        "@opencode-ai/plugin": "^1.14.51"
+        "@opencode-ai/plugin": "^1.14.51",
+        "@opentui/solid": "^0.2.16",
+        "solid-js": "^1.9.12"
     },
     "devDependencies": {
         "@types/bun": "^1.3.14",
