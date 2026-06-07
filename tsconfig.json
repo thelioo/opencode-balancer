@@ -1,17 +1,15 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "strict": true,
-    "declaration": true,
-    "sourceMap": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "skipLibCheck": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "@opentui/solid",
-    "types": ["bun"]
-  },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"jsxImportSource": "@opentui/solid",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"noEmit": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "ESNext",
+		"types": ["bun"]
+	},
+	"exclude": ["node_modules", "dist"],
+	"include": ["./**/*.ts", "./**/*.tsx"]
 }
