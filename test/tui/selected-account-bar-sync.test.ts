@@ -1,61 +1,64 @@
 import { describe, expect, test } from "bun:test";
-import { createSelectedAccountBarSync, type SelectedAccountBarSyncDeps } from "../../src/tui/selected-account-bar-sync";
+import {
+	createSelectedAccountBarSync,
+	type SelectedAccountBarSyncDeps,
+} from "../../src/tui/selected-account-bar-sync";
 
 function deps(overrides: Partial<SelectedAccountBarSyncDeps> = {}) {
-    const applied: string[] = [];
-    const base: SelectedAccountBarSyncDeps = {
-        dialogOpen: () => false,
-        selectedProvider: () => "openai",
-        currentProvider: () => "opencode",
-        applyProvider: async (providerID) => {
-            applied.push(providerID);
-            return true;
-        },
-        ...overrides,
-    };
-    return { base, applied };
+	const applied: string[] = [];
+	const base: SelectedAccountBarSyncDeps = {
+		applyProvider: async (providerID) => {
+			applied.push(providerID);
+			return true;
+		},
+		currentProvider: () => "opencode",
+		dialogOpen: () => false,
+		selectedProvider: () => "openai",
+		...overrides,
+	};
+	return { applied, base };
 }
 
 describe("createSelectedAccountBarSync", () => {
-    test("applies the selected account provider when the native provider differs", async () => {
-        const { base, applied } = deps();
+	test("applies the selected account provider when the native provider differs", async () => {
+		const { base, applied } = deps();
 
-        const sync = createSelectedAccountBarSync(base);
+		const sync = createSelectedAccountBarSync(base);
 
-        await sync.maybeSync();
+		await sync.maybeSync();
 
-        expect(applied).toEqual(["openai"]);
-        expect(sync.currentProvider()).toBe("openai");
-    });
+		expect(applied).toEqual(["openai"]);
+		expect(sync.currentProvider()).toBe("openai");
+	});
 
-    test("does not apply when the selected account already matches the native provider", async () => {
-        const { base, applied } = deps({ currentProvider: () => "openai" });
+	test("does not apply when the selected account already matches the native provider", async () => {
+		const { base, applied } = deps({ currentProvider: () => "openai" });
 
-        const sync = createSelectedAccountBarSync(base);
+		const sync = createSelectedAccountBarSync(base);
 
-        await sync.maybeSync();
+		await sync.maybeSync();
 
-        expect(applied).toEqual([]);
-    });
+		expect(applied).toEqual([]);
+	});
 
-    test("does not apply while a dialog is open", async () => {
-        const { base, applied } = deps({ dialogOpen: () => true });
+	test("does not apply while a dialog is open", async () => {
+		const { base, applied } = deps({ dialogOpen: () => true });
 
-        const sync = createSelectedAccountBarSync(base);
+		const sync = createSelectedAccountBarSync(base);
 
-        await sync.maybeSync();
+		await sync.maybeSync();
 
-        expect(applied).toEqual([]);
-    });
+		expect(applied).toEqual([]);
+	});
 
-    test("does not repeat the same successful provider application", async () => {
-        const { base, applied } = deps();
+	test("does not repeat the same successful provider application", async () => {
+		const { base, applied } = deps();
 
-        const sync = createSelectedAccountBarSync(base);
+		const sync = createSelectedAccountBarSync(base);
 
-        await sync.maybeSync();
-        await sync.maybeSync();
+		await sync.maybeSync();
+		await sync.maybeSync();
 
-        expect(applied).toEqual(["openai"]);
-    });
+		expect(applied).toEqual(["openai"]);
+	});
 });

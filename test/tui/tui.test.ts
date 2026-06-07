@@ -8,174 +8,233 @@ import plugin from "../../src/tui/tui";
 let configDirs: string[] = [];
 
 afterEach(() => {
-    for (const dir of configDirs) {
-        rmSync(dir, { recursive: true, force: true });
-    }
-    configDirs = [];
-    delete Bun.env.OPENCODE_CONFIG_DIR;
+	for (const dir of configDirs) {
+		rmSync(dir, { force: true, recursive: true });
+	}
+	configDirs = [];
+	delete Bun.env.OPENCODE_CONFIG_DIR;
 });
 
 function withTempConfigDir() {
-    const dir = mkdtempSync(join(tmpdir(), "opencode-balancer-tui-plugin-"));
-    configDirs.push(dir);
-    Bun.env.OPENCODE_CONFIG_DIR = dir;
+	const dir = mkdtempSync(join(tmpdir(), "opencode-balancer-tui-plugin-"));
+	configDirs.push(dir);
+	Bun.env.OPENCODE_CONFIG_DIR = dir;
 }
 
 function createApi() {
-    const routes: TuiRouteDefinition[] = [];
-    const keymapLayers: any[] = [];
-    const navigations: unknown[] = [];
-    const toasts: unknown[] = [];
-    const dialogs: unknown[] = [];
-    const dialogSizes: string[] = [];
-    const disposes: Array<() => void | Promise<void>> = [];
+	const routes: TuiRouteDefinition[] = [];
+	const keymapLayers: any[] = [];
+	const navigations: unknown[] = [];
+	const toasts: unknown[] = [];
+	const dialogs: unknown[] = [];
+	const dialogSizes: string[] = [];
+	const disposes: Array<() => void | Promise<void>> = [];
 
-    return {
-        api: {
-            app: { version: "test" },
-            attention: {},
-            keys: {},
-            keymap: {
-                registerLayer: (layer: any) => {
-                    keymapLayers.push(layer);
-                    return () => {};
-                },
-            },
-            mode: {},
-            route: {
-                current: { name: "home" },
-                register: (registered: TuiRouteDefinition[]) => {
-                    routes.push(...registered);
-                    return () => {};
-                },
-                navigate: (name: string, params?: Record<string, unknown>) => {
-                    navigations.push({ name, params });
-                },
-            },
-            ui: {
-                dialog: {
-                    open: false,
-                    setSize: (size: string) => dialogSizes.push(size),
-                    replace: (render: () => unknown) => dialogs.push(render),
-                    clear: () => dialogs.push("clear"),
-                },
-                toast: (input: unknown) => {
-                    toasts.push(input);
-                },
-            },
-            tuiConfig: {},
-            kv: {},
-            state: {
-                session: {
-                    get: () => undefined,
-                },
-            },
-            theme: {
-                current: {
-                    primary: "primary",
-                    accent: "accent",
-                    text: "text",
-                    textMuted: "textMuted",
-                    warning: "warning",
-                },
-            },
-            client: {},
-            event: {},
-            renderer: {},
-            slots: {
-                register: () => "test-slot",
-            },
-            plugins: {},
-            lifecycle: {
-                signal: new AbortController().signal,
-                onDispose: (fn: () => void | Promise<void>) => {
-                    disposes.push(fn);
-                    return () => {};
-                },
-            },
-        } as any,
-        routes,
-        keymapLayers,
-        navigations,
-        dialogs,
-        dialogSizes,
-        toasts,
-        disposes,
-    };
+	return {
+		api: {
+			app: { version: "test" },
+			attention: {},
+			client: {},
+			event: {},
+			keymap: {
+				registerLayer: (layer: any) => {
+					keymapLayers.push(layer);
+					return () => {};
+				},
+			},
+			keys: {},
+			kv: {},
+			lifecycle: {
+				onDispose: (fn: () => void | Promise<void>) => {
+					disposes.push(fn);
+					return () => {};
+				},
+				signal: new AbortController().signal,
+			},
+			mode: {},
+			plugins: {},
+			renderer: {},
+			route: {
+				current: { name: "home" },
+				navigate: (name: string, params?: Record<string, unknown>) => {
+					navigations.push({ name, params });
+				},
+				register: (registered: TuiRouteDefinition[]) => {
+					routes.push(...registered);
+					return () => {};
+				},
+			},
+			slots: {
+				register: () => "test-slot",
+			},
+			state: {
+				session: {
+					get: () => undefined,
+				},
+			},
+			theme: {
+				current: {
+					accent: "accent",
+					primary: "primary",
+					text: "text",
+					textMuted: "textMuted",
+					warning: "warning",
+				},
+			},
+			tuiConfig: {},
+			ui: {
+				dialog: {
+					clear: () => dialogs.push("clear"),
+					open: false,
+					replace: (render: () => unknown) => dialogs.push(render),
+					setSize: (size: string) => dialogSizes.push(size),
+				},
+				toast: (input: unknown) => {
+					toasts.push(input);
+				},
+			},
+		} as any,
+		dialogSizes,
+		dialogs,
+		disposes,
+		keymapLayers,
+		navigations,
+		routes,
+		toasts,
+	};
 }
 
 describe("tui plugin", () => {
-    test("registers dashboard routes, palette command, and keyboard shortcut", async () => {
-        withTempConfigDir();
-        const { api, routes, keymapLayers, navigations, dialogs, dialogSizes, toasts, disposes } = createApi();
+	test("registers dashboard routes, palette command, and keyboard shortcut", async () => {
+		withTempConfigDir();
+		const {
+			api,
+			routes,
+			keymapLayers,
+			navigations,
+			dialogs,
+			dialogSizes,
+			toasts,
+			disposes,
+		} = createApi();
 
-        await plugin.tui(api, undefined, {} as any);
+		await plugin.tui(api, undefined, {} as any);
 
-        expect(routes.map((route) => route.name)).toEqual(["balancer.dashboard", "balancer.priority"]);
-        const commands = keymapLayers.flatMap((layer) => layer.commands ?? []);
-        const bindings = keymapLayers.flatMap((layer) => layer.bindings ?? []);
-        const open = commands.find((command) => command.name === "balancer.dashboard.open");
-        const refresh = commands.find((command) => command.name === "balancer.usage.refresh");
+		expect(routes.map((route) => route.name)).toEqual([
+			"balancer.dashboard",
+			"balancer.priority",
+		]);
+		const commands = keymapLayers.flatMap((layer) => layer.commands ?? []);
+		const bindings = keymapLayers.flatMap((layer) => layer.bindings ?? []);
+		const open = commands.find(
+			(command) => command.name === "balancer.dashboard.open",
+		);
+		const refresh = commands.find(
+			(command) => command.name === "balancer.usage.refresh",
+		);
 
-        expect(open).toMatchObject({
-            title: "Open Balancer Dashboard",
-            category: "Plugin",
-            namespace: "palette",
-            slashName: "balancer",
-        });
-        expect(refresh).toBeUndefined();
-        expect(bindings).toContainEqual({ key: "ctrl+b", cmd: "balancer.dashboard.open" });
+		expect(open).toMatchObject({
+			category: "Plugin",
+			namespace: "palette",
+			slashName: "balancer",
+			title: "Open Balancer Dashboard",
+		});
+		expect(refresh).toBeUndefined();
+		expect(bindings).toContainEqual({
+			cmd: "balancer.dashboard.open",
+			key: "ctrl+b",
+		});
 
-        open.run();
+		open.run();
 
-        expect(dialogSizes).toEqual([]);
-        expect(dialogs).toEqual([]);
-        expect(navigations).toEqual([{ name: "balancer.dashboard", params: undefined }]);
-        expect(toasts).toEqual([]);
+		expect(dialogSizes).toEqual([]);
+		expect(dialogs).toEqual([]);
+		expect(navigations).toEqual([
+			{ name: "balancer.dashboard", params: undefined },
+		]);
+		expect(toasts).toEqual([]);
 
-        for (const dispose of disposes) await dispose();
-    });
+		for (const dispose of disposes) await dispose();
+	});
 
-    test("passes dynamic session provider lookups to reactive sidebar/status handlers", async () => {
-        const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
+	test("passes dynamic session provider lookups to reactive sidebar/status handlers", async () => {
+		const source = await Bun.file(
+			join(import.meta.dir, "../../src/tui/tui.tsx"),
+		).text();
 
-        expect(source).toContain("providerID: () => inferProviderID(api.state.session.get(value.session_id))");
-        expect(source).toContain("sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id))");
-    });
+		expect(source).toContain(
+			"providerID: () => inferProviderID(api.state.session.get(value.session_id))",
+		);
+		expect(source).toContain(
+			"sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id))",
+		);
+	});
 
-    test("does not open the balancer model picker from sidebar account activation", async () => {
-        const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
-        const sidebarContent = source.slice(source.indexOf("sidebar_content"), source.indexOf("});", source.indexOf("sidebar_content")));
+	test("does not open the balancer model picker from sidebar account activation", async () => {
+		const source = await Bun.file(
+			join(import.meta.dir, "../../src/tui/tui.tsx"),
+		).text();
+		const sidebarContent = source.slice(
+			source.indexOf("sidebar_content"),
+			source.indexOf("});", source.indexOf("sidebar_content")),
+		);
 
-        expect(sidebarContent).toContain("activateAccount(api, state, providerID, alias");
-        expect(sidebarContent).toContain("applyNativeProviderModel");
-        expect(source).toContain("const nativeModelApplier = createNativeModelApplier(api)");
-        expect(sidebarContent).not.toContain("openProviderModelDialog(api, state, targetProviderID)");
-    });
+		expect(sidebarContent).toContain(
+			"activateAccount(api, state, providerID, alias",
+		);
+		expect(sidebarContent).toContain("applyNativeProviderModel");
+		expect(source).toContain(
+			"const nativeModelApplier = createNativeModelApplier(api)",
+		);
+		expect(sidebarContent).not.toContain(
+			"openProviderModelDialog(api, state, targetProviderID)",
+		);
+	});
 
-    test("does not replay priority model choices through opencode's native model dialog", async () => {
-        const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
-        const priorityRoute = source.slice(source.indexOf('name: "balancer.priority"'), source.indexOf("}),", source.indexOf('name: "balancer.priority"')));
+	test("does not replay priority model choices through opencode's native model dialog", async () => {
+		const source = await Bun.file(
+			join(import.meta.dir, "../../src/tui/tui.tsx"),
+		).text();
+		const priorityRoute = source.slice(
+			source.indexOf('name: "balancer.priority"'),
+			source.indexOf("}),", source.indexOf('name: "balancer.priority"')),
+		);
 
-        expect(priorityRoute).toContain("openProviderModelDialog(api, state, providerID");
-        expect(priorityRoute).toContain("applyNativeSelection: false");
-    });
+		expect(priorityRoute).toContain(
+			"openProviderModelDialog(api, state, providerID",
+		);
+		expect(priorityRoute).toContain("applyNativeSelection: false");
+	});
 
-    test("tracks the last natively applied provider before activating sidebar accounts", async () => {
-        const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
-        const sidebarContent = source.slice(source.indexOf("sidebar_content"), source.indexOf("});", source.indexOf("sidebar_content")));
+	test("tracks the last natively applied provider before activating sidebar accounts", async () => {
+		const source = await Bun.file(
+			join(import.meta.dir, "../../src/tui/tui.tsx"),
+		).text();
+		const sidebarContent = source.slice(
+			source.indexOf("sidebar_content"),
+			source.indexOf("});", source.indexOf("sidebar_content")),
+		);
 
-        expect(source).toContain("let nativeProviderID: string | undefined");
-        expect(sidebarContent).toContain("sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id))");
-        expect(source).toContain("if (applied) nativeProviderID = providerID");
-    });
+		expect(source).toContain("let nativeProviderID: string | undefined");
+		expect(sidebarContent).toContain(
+			"sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id))",
+		);
+		expect(source).toContain("if (applied) nativeProviderID = providerID");
+	});
 
-    test("syncs the native bar to the selected balancer account on session render", async () => {
-        const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
-        const promptRight = source.slice(source.indexOf("session_prompt_right"), source.indexOf("sidebar_content"));
+	test("syncs the native bar to the selected balancer account on session render", async () => {
+		const source = await Bun.file(
+			join(import.meta.dir, "../../src/tui/tui.tsx"),
+		).text();
+		const promptRight = source.slice(
+			source.indexOf("session_prompt_right"),
+			source.indexOf("sidebar_content"),
+		);
 
-        expect(source).toContain("createSelectedAccountBarSync");
-        expect(promptRight).toContain("sessionProviderID = inferProviderID(api.state.session.get(value.session_id))");
-        expect(promptRight).toContain("void selectedAccountBarSync.maybeSync()");
-    });
+		expect(source).toContain("createSelectedAccountBarSync");
+		expect(promptRight).toContain(
+			"sessionProviderID = inferProviderID(api.state.session.get(value.session_id))",
+		);
+		expect(promptRight).toContain("void selectedAccountBarSync.maybeSync()");
+	});
 });
