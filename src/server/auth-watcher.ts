@@ -141,7 +141,20 @@ export function readNativeAuth(): NativeAuthReadResult {
 }
 
 function authChanged(previous: AuthInfo | undefined, current: AuthInfo) {
-	return JSON.stringify(previous ?? null) !== JSON.stringify(current);
+	return stableStringify(previous ?? null) !== stableStringify(current);
+}
+
+function stableStringify(value: unknown): string {
+	return JSON.stringify(sortKeys(value));
+}
+
+function sortKeys(value: unknown): unknown {
+	if (!isRecord(value)) return value;
+	return Object.fromEntries(
+		Object.entries(value)
+			.sort(([left], [right]) => left.localeCompare(right))
+			.map(([key, entry]) => [key, sortKeys(entry)]),
+	);
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> | undefined {

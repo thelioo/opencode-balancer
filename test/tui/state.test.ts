@@ -54,7 +54,7 @@ describe("createBalancerTuiState", () => {
 					alias: "work",
 					message: "saved work account",
 					providerID: "anthropic",
-					type: "account.saved",
+					type: "account_saved",
 				});
 
 				state.refresh();

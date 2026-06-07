@@ -2,6 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+const compact = (source: string) => source.replace(/\s+/g, "");
+const expectSourceToContain = (source: string, snippet: string) =>
+	expect(compact(source)).toContain(compact(snippet));
+
 describe("BalancerSidebar", () => {
 	test("renders account activation as a clickable box row", () => {
 		const source = readFileSync(
@@ -9,7 +13,8 @@ describe("BalancerSidebar", () => {
 			"utf8",
 		);
 
-		expect(source).toContain(
+		expectSourceToContain(
+			source,
 			'<box flexDirection="column" gap={0} onMouseUp={() => props.activateAccount(account.providerID, account.alias)}>',
 		);
 	});

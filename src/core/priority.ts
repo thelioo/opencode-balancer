@@ -126,10 +126,8 @@ export function moveProvider(
 	reordered.splice(target, 0, moved);
 
 	const persist = db.transaction(() => {
-		for (const entry of list) {
-			if (entry.providerID === providerID) continue;
-
-			upsert(db, entry.providerID, { position: entry.position });
+		for (const [position, entry] of reordered.entries()) {
+			upsert(db, entry.providerID, { position });
 		}
 	});
 	persist();

@@ -2,6 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+const compact = (source: string) => source.replace(/\s+/g, "");
+const expectSourceToContain = (source: string, snippet: string) =>
+	expect(compact(source)).toContain(compact(snippet));
+
 describe("PriorityScreen", () => {
 	test("fills selected row background across model and enabled cells", () => {
 		const source = readFileSync(
@@ -12,10 +16,12 @@ describe("PriorityScreen", () => {
 		expect(source).toContain(
 			"backgroundColor={rowProps.selected ? selectedColors().bg : undefined}",
 		);
-		expect(source).toContain(
+		expectSourceToContain(
+			source,
 			"backgroundColor={selected() ? selectedColors().bg : undefined}",
 		);
-		expect(source).toContain(
+		expectSourceToContain(
+			source,
 			"onMouseUp={() => props.openModelPicker(entry.providerID, restoreFocus)}",
 		);
 		expect(source).toContain("onMouseUp={() => toggleEnabled(entry)}");

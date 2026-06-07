@@ -73,7 +73,9 @@ describe("server fetch patch", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect(attemptedAuthorization).toBe("Bearer fresh-native-access");
+		expect(attemptedAuthorization as unknown).toBe(
+			"Bearer fresh-native-access",
+		);
 	});
 
 	test("overrides oauth authorization on failover attempts so the retry uses the next account", async () => {

@@ -4,12 +4,12 @@
 		"jsxImportSource": "@opentui/solid",
 		"module": "ESNext",
 		"moduleResolution": "Bundler",
-		"outDir": "dist",
-		"rootDir": "src",
+		"noEmit": true,
 		"skipLibCheck": true,
 		"strict": true,
 		"target": "ESNext",
 		"types": ["bun"]
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx"]
+	"exclude": ["node_modules", "dist"],
+	"include": ["./**/*.ts", "./**/*.tsx"]
 }

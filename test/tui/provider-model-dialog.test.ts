@@ -141,7 +141,10 @@ describe("openProviderModelDialog", () => {
 			{ db, refresh: () => {} } as never,
 			"github-copilot",
 			{
-				applyNativeSelection: async (model, title) => {
+				applyNativeSelection: async (
+					model: { providerID: string; modelID: string },
+					title: string,
+				) => {
 					applied.push({ model, title });
 					return true;
 				},
@@ -189,7 +192,7 @@ describe("openProviderModelDialog", () => {
 			"openai",
 			{
 				applyNativeSelection: async () => true,
-				onSelected: (model) =>
+				onSelected: (model: { providerID: string; modelID: string }) =>
 					setProviderModel(db, model.providerID, model.modelID),
 			},
 		);
@@ -294,7 +297,7 @@ describe("openProviderModelDialog", () => {
 			{
 				applyNativeSelection: false,
 				onComplete: () => order.push("complete"),
-				onSelected: (model) =>
+				onSelected: (model: { providerID: string; modelID: string }) =>
 					setProviderModel(db, model.providerID, model.modelID),
 			},
 		);

@@ -13,7 +13,7 @@ describe("copilot usage service", () => {
 		globalThis.fetch = (async () => {
 			called = true;
 			return new Response(null, { status: 200 });
-		}) as typeof fetch;
+		}) as unknown as typeof fetch;
 
 		const snapshot = await copilotUsageService.refreshUsage({
 			alias: "work",
@@ -41,7 +41,7 @@ describe("copilot usage service", () => {
 		globalThis.fetch = (async () => {
 			called = true;
 			return new Response(null, { status: 200 });
-		}) as typeof fetch;
+		}) as unknown as typeof fetch;
 
 		const snapshot = await copilotUsageService.refreshUsage({
 			alias: "work",

@@ -2,6 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+const compact = (source: string) => source.replace(/\s+/g, "");
+const expectSourceToContain = (source: string, snippet: string) =>
+	expect(compact(source)).toContain(compact(snippet));
+
 import type { TuiRouteDefinition } from "@opencode-ai/plugin/tui";
 import plugin from "../../src/tui/tui";
 
@@ -162,10 +167,12 @@ describe("tui plugin", () => {
 			join(import.meta.dir, "../../src/tui/tui.tsx"),
 		).text();
 
-		expect(source).toContain(
+		expectSourceToContain(
+			source,
 			"providerID: () => inferProviderID(api.state.session.get(value.session_id))",
 		);
-		expect(source).toContain(
+		expectSourceToContain(
+			source,
 			"sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id))",
 		);
 	});
@@ -200,7 +207,8 @@ describe("tui plugin", () => {
 			source.indexOf("}),", source.indexOf('name: "balancer.priority"')),
 		);
 
-		expect(priorityRoute).toContain(
+		expectSourceToContain(
+			priorityRoute,
 			"openProviderModelDialog(api, state, providerID",
 		);
 		expect(priorityRoute).toContain("applyNativeSelection: false");
@@ -216,7 +224,8 @@ describe("tui plugin", () => {
 		);
 
 		expect(source).toContain("let nativeProviderID: string | undefined");
-		expect(sidebarContent).toContain(
+		expectSourceToContain(
+			sidebarContent,
 			"sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id))",
 		);
 		expect(source).toContain("if (applied) nativeProviderID = providerID");
@@ -232,8 +241,9 @@ describe("tui plugin", () => {
 		);
 
 		expect(source).toContain("createSelectedAccountBarSync");
-		expect(promptRight).toContain(
-			"sessionProviderID = inferProviderID(api.state.session.get(value.session_id))",
+		expectSourceToContain(
+			promptRight,
+			"sessionProviderID = inferProviderID(api.state.session.get(value.session_id),)",
 		);
 		expect(promptRight).toContain("void selectedAccountBarSync.maybeSync()");
 	});

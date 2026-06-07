@@ -164,7 +164,10 @@ describe("openNativeConnect", () => {
 				dispatchCommand: async () => undefined,
 			},
 			readAuth: () => ({
-				auth: firstReads++ === 0 ? {} : { openai: saved },
+				auth:
+					firstReads++ === 0
+						? ({} as Record<string, AuthInfo>)
+						: { openai: saved },
 				ok: true,
 			}),
 			ui: { toast: () => {} },

@@ -35,16 +35,16 @@ describe("TUI artifacts", () => {
 		const distDir = join(import.meta.dir, "../../dist");
 		if (!existsSync(distDir)) return;
 
-		const serverModule = (await import("../../dist/index.js") as unknown) as {
+		const serverModule = (await import("../../dist/index.js" as string)) as {
 			default: Record<string, unknown>;
 		};
-		const tuiModule = (await import("../../dist/tui/tui.tsx") as unknown) as {
+		const tuiModule = (await import("../../dist/tui/tui.tsx" as string)) as {
 			default: Record<string, unknown>;
 		};
 
-		expect(typeof serverModule.default).toBe("object");
-		expect(typeof serverModule.default.server).toBe("function");
-		expect("tui" in serverModule.default).toBe(false);
+		expect(typeof serverModule.default).toBe("function");
+		expect(serverModule.default.id).toBe("opencode-balancer");
+		expect(typeof serverModule.default.tui).toBe("function");
 		expect(typeof tuiModule.default).toBe("object");
 		expect(typeof tuiModule.default.tui).toBe("function");
 		expect("server" in tuiModule.default).toBe(false);

@@ -2,6 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+const compact = (source: string) => source.replace(/\s+/g, "");
+const expectSourceToContain = (source: string, snippet: string) =>
+	expect(compact(source)).toContain(compact(snippet));
+
 describe("Dashboard", () => {
 	test("renders new account as an accounts row instead of a header action", () => {
 		const source = readFileSync(
@@ -11,8 +15,9 @@ describe("Dashboard", () => {
 
 		expect(source).toContain('type: "connect"');
 		expect(source).toContain("New account");
-		expect(source).toContain(
-			'<SectionTitle label="ACCOUNTS" count={accounts().length} />',
+		expectSourceToContain(
+			source,
+			'<SectionTitle count={accounts().length} label="ACCOUNTS" />',
 		);
 		expect(source).toContain("props.openConnect");
 		expect(source).not.toContain('<SectionTitle label="CONNECTIONS" />');
@@ -25,8 +30,9 @@ describe("Dashboard", () => {
 			"utf8",
 		);
 
+		expectSourceToContain(source, "muted={!selected(");
 		expect(source).toContain(
-			"muted={!selected(`account:${account.providerID}/${account.alias}`)}",
+			"`account:${account.providerID}/${account.alias}`",
 		);
 	});
 

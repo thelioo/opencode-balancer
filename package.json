@@ -48,7 +48,7 @@
 		"build": "bun scripts/build.ts",
 		"changeset": "changeset",
 		"checktypes": "tsgo --noEmit --project tsconfig.json",
-		"format": "biome format --write src test package.json tsconfig.json",
+		"format": "biome format --write src test package.json tsconfig.json tsconfig.build.json",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --fix",
 		"lint:unsafe": "biome check . --fix --unsafe",
