@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NPM_CONFIG_PROVENANCE: true
+      NODE_AUTH_TOKEN: ""
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+
+      - name: Update npm for trusted publishing
+        run: npm install --global npm@latest
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check TypeScript
+        run: bun check
+
+      - name: Run tests
+        run: bun test
+
+      - name: Build package
+        run: bun build
+
+      - name: Create version PR or publish npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: bun run version-packages
+          publish: bun run release
+          createGithubReleases: true
+          title: "chore: release package"
+          commit: "chore: release package"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push release tags
+        if: steps.changesets.outputs.published == 'true'
+        run: git push --follow-tags

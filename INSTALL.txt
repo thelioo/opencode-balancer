@@ -1,17 +1,18 @@
 opencode-balancer installation guide for AI agents
 
 Goal
-Install @thelioo/opencode-balancer as an opencode npm plugin without removing or rewriting the user's existing opencode configuration.
+Install @thelioo/opencode-balancer as both an opencode server plugin and an opencode TUI plugin without removing or rewriting the user's existing opencode configuration.
 
 What this plugin does
-opencode-balancer lets opencode users save multiple authenticated accounts per provider, switch active accounts with /balancer commands, and automatically retry with another saved account when the active account is rate-limited.
+opencode-balancer lets opencode users save multiple authenticated accounts per provider, manage them from a TUI dashboard, choose provider/model priority, and automatically retry with another healthy account when the active account is rate-limited.
 
 Important rules
-- Do not run npm install for this plugin. opencode installs npm plugins automatically with Bun at startup.
-- Preserve existing opencode config, plugins, comments, formatting, providers, agents, MCP servers, and permissions whenever possible.
+- Do not run npm install, bun install, or other package install commands for this plugin during user setup. opencode installs npm plugins automatically with Bun at startup.
+- Preserve existing opencode config, TUI config, plugins, comments, formatting, providers, agents, MCP servers, and permissions whenever possible.
 - Use the singular key "plugin", not "plugins".
 - Add the plugin only if it is not already present.
 - Prefer @thelioo/opencode-balancer@latest for user installs.
+- Keep config changes minimal and do not remove unrelated user settings.
 
 Steps
 1. Locate the user's opencode config.
@@ -25,14 +26,28 @@ Steps
    - If the config is JSONC, keep JSONC syntax valid.
    - If the config is JSON, keep JSON syntax valid.
 
-3. Add this plugin entry:
+3. Add this plugin entry to the opencode config plugin array:
    @thelioo/opencode-balancer@latest
 
-4. Save the config.
+4. Locate the user's opencode TUI config.
+   - Prefer ~/.config/opencode/tui.jsonc if it exists.
+   - Otherwise use ~/.config/opencode/tui.json if it exists.
+   - If neither exists, create ~/.config/opencode/tui.json with a minimal JSON object.
 
-5. Show the user the final plugin array.
+5. Ensure the TUI config has a top-level plugin array.
+   - If plugin already exists and is an array, keep all existing entries.
+   - If plugin is missing, create it.
+   - If the config is JSONC, keep JSONC syntax valid.
+   - If the config is JSON, keep JSON syntax valid.
 
-6. Tell the user to restart opencode.
+6. Add this plugin entry to the TUI config plugin array:
+   @thelioo/opencode-balancer@latest
+
+7. Save both configs.
+
+8. Show the user both final plugin arrays.
+
+9. Tell the user to restart opencode.
 
 Expected config shape
 {
@@ -40,19 +55,41 @@ Expected config shape
   "plugin": ["@thelioo/opencode-balancer@latest"]
 }
 
-After restart
-The user can connect and save accounts with:
-/connect anthropic
-/balancer alias work
+Expected TUI config shape
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": ["@thelioo/opencode-balancer@latest"]
+}
 
-Useful commands
-/balancer help
-/balancer list
-/balancer status
-/balancer use <provider> <alias>
-/balancer remove <provider> <alias>
+After restart
+1. Tell the user to open the Balancer dashboard using one of these options:
+   - Press Ctrl+B.
+   - Run /balancer.
+   - Open "Open Balancer Dashboard" from the opencode command palette.
+   - Use the Balancer button in the sidebar if visible.
+
+2. Tell the user to choose "New account" in the dashboard, or press C, to start opencode's native provider connection flow.
+
+3. Tell the user to complete the provider connection in opencode. The plugin detects the changed provider credentials and saves them from the TUI workflow automatically. If the credentials match an existing saved account, the saved account is refreshed instead of duplicated.
+
+4. Tell the user to open the priority matrix from the dashboard header, or press P, to configure automatic balancing:
+   - Press B to turn automatic balancing on or off.
+   - Press Enter on a provider to choose its model.
+   - Use Shift+Up and Shift+Down to reorder provider priority.
+   - Press Space to enable or disable a provider.
+
+5. Remind the user to restart opencode after any later config changes.
+
+Security note
+The plugin stores saved provider credentials locally in balancer.sqlite under the opencode config directory, usually ~/.config/opencode/balancer.sqlite or OPENCODE_CONFIG_DIR/balancer.sqlite. Keep this file private and never commit, paste, or share it.
+
+TUI-only workflow
+/balancer opens the Balancer dashboard in the TUI. Account management, provider/model priority, supported usage snapshots, and balancing settings are handled from the TUI only.
 
 Verification
 - Confirm the opencode config contains @thelioo/opencode-balancer@latest in the plugin array.
+- Confirm the opencode TUI config contains @thelioo/opencode-balancer@latest in the plugin array.
 - Confirm no existing plugin entries were removed.
-- Remind the user that opencode must be restarted before /balancer becomes available.
+- Confirm the user restarted opencode after the config change.
+- Confirm the Balancer dashboard opens with Ctrl+B, /balancer, or the command palette.
+- Confirm at least one account can be connected from the dashboard before helping configure balancing.

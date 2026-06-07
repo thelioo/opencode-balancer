@@ -9,7 +9,9 @@
     "outDir": "dist",
     "rootDir": "src",
     "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@opentui/solid",
     "types": ["bun"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

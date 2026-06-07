@@ -2,32 +2,33 @@
 
 # opencode-balancer
 
-_Use multiple accounts per opencode provider and switch automatically when one hits a rate limit._
+_Use multiple accounts and provider/model priorities in opencode, then fail over automatically when one account hits a limit._
 
 [![npm version](https://img.shields.io/npm/v/@thelioo/opencode-balancer?style=flat-square)](https://www.npmjs.com/package/@thelioo/opencode-balancer)
 [![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![opencode plugin](https://img.shields.io/badge/opencode-plugin-111?style=flat-square)](https://opencode.ai/docs/plugins)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-[Features](#features) | [Installation](#installation) | [Usage](#usage) | [Commands](#commands) | [Troubleshooting](#troubleshooting)
+[Features](#features) | [Installation](#installation) | [Usage](#usage) | [Troubleshooting](#troubleshooting)
 
 </div>
 
-`opencode-balancer` is an [opencode](https://opencode.ai/) plugin that lets you save multiple authenticated accounts for the same provider, give each one a friendly alias, and keep working when the active account becomes rate-limited.
+`opencode-balancer` is an [opencode](https://opencode.ai/) server and TUI plugin that lets you keep several authenticated accounts, choose which provider/model should be used first, and keep working when the current account becomes rate-limited.
 
-It works with opencode's existing auth flow: connect a provider, save the detected credentials as an alias, then let the plugin inject the active account credentials into future model requests.
+It integrates with opencode's native provider connection flow. Use the plugin dashboard to connect accounts, inspect usage, switch active accounts, configure provider priority, and enable or disable automatic balancing.
 
 > [!NOTE]
 > This plugin manages credentials already configured through opencode. It does not create accounts, bypass provider limits, or modify provider-side quotas.
 
 ## Features
 
-- **Multiple accounts per provider**: Save aliases like `work`, `personal`, or `backup` for the same provider.
-- **Automatic failover**: Switches to another saved account on retryable rate-limit/server responses.
-- **Native opencode commands**: Adds `/balancer` directly inside opencode.
-- **OAuth-friendly setup**: Adds an optional alias prompt to provider OAuth flows.
-- **Agent tool support**: Exposes a `balancer_command` tool so opencode agents can manage accounts when asked.
-- **Local credential store**: Saves account metadata under your opencode config directory.
+- **Multiple accounts per provider**: Save and activate separate accounts for the same provider.
+- **Automatic failover**: Retries with another healthy account after retryable responses such as `429`, `500`, `502`, `503`, `504`, or `529`.
+- **Provider priority matrix**: Choose one model per provider, reorder failover priority, and disable providers from the balancer.
+- **TUI dashboard**: Open a control center from the command palette, `/balancer`, `Ctrl+B`, or the sidebar.
+- **Native connect flow**: Start opencode's provider connection from the dashboard and save the detected account automatically.
+- **Usage snapshots**: Shows per-account usage when the provider exposes supported usage data.
+- **Local credential store**: Saves accounts, usage snapshots, events, and priority settings under your opencode config directory.
 
 ## Installation
 
@@ -44,7 +45,7 @@ Or read the local guide: [INSTALL.txt](INSTALL.txt).
 
 ### Option B: Manual Setup
 
-Add the plugin to your opencode config:
+Add the plugin to your opencode config so the server hooks can run:
 
 ```json
 {
@@ -53,85 +54,88 @@ Add the plugin to your opencode config:
 }
 ```
 
-Then restart opencode.
+Then add the same plugin to your opencode TUI config so the dashboard can load:
+
+```json
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": ["@thelioo/opencode-balancer@latest"]
+}
+```
+
+Then restart opencode. The same package provides both the server hooks and the TUI dashboard.
 
 > [!TIP]
-> No manual `npm install` is required. opencode automatically installs npm plugins with Bun at startup and caches them locally.
+> No manual `npm install` is required. opencode installs npm plugins automatically with Bun at startup and caches them locally.
 
 ## Usage
 
-### Save Your First Account
+### Open The Dashboard
 
-Connect a provider as usual:
+Open the Balancer dashboard with any of these entry points:
 
-```text
-/connect anthropic
-```
+- Press `Ctrl+B`.
+- Run `/balancer` from opencode to open the dashboard.
+- Open **Open Balancer Dashboard** from the command palette.
+- Click the Balancer dashboard button in the sidebar.
 
-After the connection is detected, save it with an alias:
+The dashboard is the primary workflow for account management. It works on compact and full terminal layouts.
 
-```text
-/balancer alias work
-```
+### Connect An Account
 
-### Add Another Account
+In the dashboard, choose **New account** or press `C`. The plugin opens opencode's native provider connection flow.
 
-Connect the same provider with a different account, then save it:
+After the provider auth changes, `opencode-balancer` detects the new credentials and saves them as an account. If the credentials match an existing saved account, the saved account is refreshed instead of duplicated.
 
-```text
-/connect anthropic
-/balancer alias personal
-```
+### Manage Accounts
 
-### Switch Accounts Manually
+Use the dashboard and sidebar to:
 
-```text
-/balancer use anthropic work
-```
-
-### List Saved Accounts
-
-```text
-/balancer list
-```
-
-Example output:
-
-```text
-anthropic:
-  * work (oauth, healthy)
-    personal (oauth, healthy)
-```
-
-When the active account receives a retryable response such as `429`, `500`, `502`, `503`, `504`, or `529`, the plugin marks it as temporarily rate-limited and retries with another available account for the same provider.
-
-## Commands
-
-| Command | Description |
-| --- | --- |
-| `/balancer help` | Show available commands. |
-| `/balancer alias <name>` | Save the last detected connection with an alias. |
-| `/balancer save <provider> <name>` | Save the provider's current native credentials. |
-| `/balancer use <provider> <name>` | Switch the active account for a provider. |
-| `/balancer list` | List saved accounts. |
-| `/balancer status` | Show saved accounts, last capture, and storage path. |
-| `/balancer remove <provider> <name>` | Remove a saved account. |
+- Activate an account for a provider.
+- Rename an account.
+- Remove an account after confirmation.
+- View supported usage snapshots when the provider exposes compatible usage data.
 
 Aliases are normalized to lowercase and may contain letters, numbers, dots, hyphens, and underscores.
 
+### Configure Automatic Balancing
+
+Open the priority matrix from the dashboard header or press `P`.
+
+In the priority matrix you can:
+
+- Press `B` to enable or disable automatic balancing.
+- Pick the model used for each provider with `Enter`.
+- Reorder providers with `Shift+Up` and `Shift+Down`.
+- Enable or disable individual providers with `Space`.
+
+When balancing is on, the priority matrix decides the provider/model for each message. The plugin selects the first enabled provider with a configured model and a healthy saved account. When a retryable error is returned, the current account is temporarily marked as rate-limited and another healthy account for that provider is used when available.
+
+When balancing is off, opencode keeps its native provider/model selection. The plugin only applies the selected saved account when needed.
+
+## TUI Entry Points
+
+`opencode-balancer` is managed from the TUI. Use one of these entry points to open the dashboard:
+
+- `Ctrl+B`
+- `/balancer`
+- **Open Balancer Dashboard** in the command palette
+- The Balancer sidebar button
+
 ## How It Works
 
-`opencode-balancer` hooks into opencode's plugin lifecycle and request flow:
+`opencode-balancer` combines server hooks with a TUI module:
 
-1. It watches opencode auth changes and records the last detected provider credentials.
-2. `/balancer alias <name>` stores those credentials under a provider-specific alias.
-3. Before model requests, the plugin selects the active account for the request provider.
-4. If the provider returns a retryable rate-limit or server response, the plugin marks the account as temporarily unavailable and retries with another saved account.
+1. The TUI dashboard opens opencode's native connect flow and stores changed provider credentials as saved accounts.
+2. The dashboard stores selected accounts, per-provider models, balancing state, usage snapshots, and priority order in a local SQLite database.
+3. Before a chat request, server hooks choose the active account and, when balancing is enabled, the provider/model from the priority matrix.
+4. A fetch patch injects the selected account credentials into the provider request.
+5. Retryable provider responses mark the account as temporarily rate-limited and trigger a retry with another healthy account when balancing is enabled.
 
 Saved account data is written to:
 
 ```text
-~/.config/opencode/balancer-accounts.json
+~/.config/opencode/balancer.sqlite
 ```
 
 If `OPENCODE_CONFIG_DIR` is set, the plugin uses that directory instead.
@@ -142,12 +146,29 @@ If `OPENCODE_CONFIG_DIR` is set, the plugin uses that directory instead.
 ## Local Development
 
 ```bash
-npm install
-npm run check
-npm run build
+bun install
+bun run check
+bun run build
+bun test
 ```
 
-To test a local checkout with opencode, point your config to the package directory:
+Releases use Changesets:
+
+```bash
+bun run changeset
+bun run version-packages
+bun run release
+```
+
+To test a local checkout with opencode, point your opencode config to the package directory:
+
+```json
+{
+  "plugin": ["file:///absolute/path/to/opencode-balancer"]
+}
+```
+
+And add the same local path to your TUI config:
 
 ```json
 {
@@ -159,11 +180,11 @@ To test a local checkout with opencode, point your config to the package directo
 
 | Problem | What to try |
 | --- | --- |
-| Plugin does not load | Confirm `plugin` is singular, restart opencode, and check that the package name is `@thelioo/opencode-balancer@latest`. |
-| `/balancer` is unavailable | Restart opencode after editing the config. |
-| No connection detected | Run `/connect <provider>` first, then `/balancer alias <name>`. |
-| Account is not switching | Run `/balancer list` and confirm there is another healthy account for the same provider. |
-| Need to inspect storage | Run `/balancer status` to see the account store path. |
+| Plugin does not load | Confirm `plugin` is singular in opencode config, restart opencode, and check that the package name is `@thelioo/opencode-balancer@latest`. |
+| Dashboard does not open | Confirm `tui.json` also contains the plugin, restart opencode, then try `Ctrl+B`, `/balancer`, or the command palette. |
+| Account was not saved | Use **New account** from the Balancer dashboard and complete opencode's native provider connection flow. |
+| Provider is skipped | Open the priority matrix and confirm the provider is enabled and has a model selected. |
+| Account is not switching | Confirm there is another non-disabled saved account for the same provider and automatic balancing is on. |
 
 ## Resources
 
