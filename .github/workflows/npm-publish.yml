@@ -23,4 +23,10 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
-      - run: npm publish --access public
+      - name: Publish prerelease to npm
+        if: github.event.release.prerelease == true
+        run: npm publish --access public --tag next
+
+      - name: Publish latest to npm
+        if: github.event.release.prerelease == false
+        run: npm publish --access public
