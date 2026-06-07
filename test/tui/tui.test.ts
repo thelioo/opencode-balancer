@@ -152,4 +152,12 @@ describe("tui plugin", () => {
         expect(source).toContain("const nativeModelApplier = createNativeModelApplier(api)");
         expect(sidebarContent).not.toContain("openProviderModelDialog(api, state, targetProviderID)");
     });
+
+    test("does not replay priority model choices through opencode's native model dialog", async () => {
+        const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
+        const priorityRoute = source.slice(source.indexOf('name: "balancer.priority"'), source.indexOf("}),", source.indexOf('name: "balancer.priority"')));
+
+        expect(priorityRoute).toContain("openProviderModelDialog(api, state, providerID");
+        expect(priorityRoute).toContain("applyNativeSelection: false");
+    });
 });

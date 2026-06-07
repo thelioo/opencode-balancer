@@ -97,9 +97,11 @@ const tui: TuiPlugin = async (api) => {
                     api,
                     state,
                     onBack: () => api.route.navigate("balancer.dashboard"),
-                    openModelPicker: (providerID) =>
+                    openModelPicker: (providerID, onComplete) =>
                         providerModelDialogModule.openProviderModelDialog(api, state, providerID, {
+                            applyNativeSelection: false,
                             onSelected: (model) => setProviderModel(state.db, model.providerID, model.modelID),
+                            onComplete,
                         }),
                 }),
         },

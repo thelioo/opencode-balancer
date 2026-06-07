@@ -9,7 +9,8 @@ import type { BalancerTuiState } from "../state";
 type OpenProviderModelDialogOptions = {
     // Test seam: replays the chosen model into opencode's native dialog so the
     // native model bar updates. Defaults to driving opencode via simulated keys.
-    applyNativeSelection?: NativeModelApplier;
+    applyNativeSelection?: NativeModelApplier | false;
+    onComplete?: () => void;
     onSelected?: (model: { providerID: string; modelID: string }) => void;
 };
 
@@ -52,19 +53,28 @@ export function openProviderModelDialog(
                 // model dialog so its bottom model bar reflects the selection.
                 api.ui.dialog.clear();
 
-                void Promise.resolve(applyNativeSelection(model, option.value.title)).then((applied) => {
-                    if (applied) {
+                if (applyNativeSelection === false) {
+                    options.onComplete?.();
+                    return;
+                }
+
+                void Promise.resolve(applyNativeSelection(model, option.value.title))
+                    .then((applied) => {
+                        if (applied) {
+                            api.ui.toast({
+                                variant: "success",
+                                message: `Switched to ${option.value.providerName}/${option.value.title}.`,
+                            });
+                            return;
+                        }
                         api.ui.toast({
-                            variant: "success",
-                            message: `Switched to ${option.value.providerName}/${option.value.title}.`,
+                            variant: "warning",
+                            message: `Selected ${option.value.providerName}/${option.value.title}; prompts will use it, but opencode's model bar may not have refreshed.`,
                         });
-                        return;
-                    }
-                    api.ui.toast({
-                        variant: "warning",
-                        message: `Selected ${option.value.providerName}/${option.value.title}; prompts will use it, but opencode's model bar may not have refreshed.`,
+                    })
+                    .finally(() => {
+                        options.onComplete?.();
                     });
-                });
             }}
         />
     ));

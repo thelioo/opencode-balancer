@@ -34,7 +34,7 @@ export function PriorityScreen(props: {
     api: TuiPluginApi;
     state: BalancerTuiState;
     onBack: () => void;
-    openModelPicker: (providerID: string) => void;
+    openModelPicker: (providerID: string, onComplete?: () => void) => void;
 }) {
     const theme = () => props.api.theme.current;
     const selectedColors = () => selectedRowColors(theme());
@@ -114,7 +114,7 @@ export function PriorityScreen(props: {
             case "open-model": {
                 if (focusArea() === "header") return props.onBack();
                 const entry = current();
-                if (entry) props.openModelPicker(entry.providerID);
+                if (entry) props.openModelPicker(entry.providerID, restoreFocus);
                 return;
             }
             case "toggle-balancing":
@@ -129,6 +129,7 @@ export function PriorityScreen(props: {
     };
 
     let container: { focus?: () => void } | undefined;
+    const restoreFocus = () => queueMicrotask(() => container?.focus?.());
     onMount(() => container?.focus?.());
 
     const Hint = (hintProps: { children: string }) => (
@@ -259,7 +260,7 @@ export function PriorityScreen(props: {
                                         flexGrow={1}
                                         minWidth={0}
                                         backgroundColor={selected() ? selectedColors().bg : undefined}
-                                        onMouseUp={() => props.openModelPicker(entry.providerID)}
+                                        onMouseUp={() => props.openModelPicker(entry.providerID, restoreFocus)}
                                     >
                                         <text fg={selected() ? selectedColors().fg : entry.modelID ? rowColor() : theme().warning} wrapMode="none" overflow="hidden" truncate>
                                             {modelLabel(props.api, entry)}

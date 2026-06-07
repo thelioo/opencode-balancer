@@ -163,4 +163,56 @@ describe("openProviderModelDialog", () => {
             },
         ]);
     });
+
+    test("notifies after native model application so the caller can restore keyboard focus", async () => {
+        await import("@opentui/solid/runtime-plugin" + "-support");
+        const { openProviderModelDialog } = await import("../../src/tui/components/provider-model-dialog" + ".tsx");
+        const db = createDb();
+        const toasts: unknown[] = [];
+        const cleared = { value: false };
+        const order: string[] = [];
+        let selectProps: SelectProps | undefined;
+
+        const api = createApi((props) => (selectProps = props), toasts, cleared);
+
+        openProviderModelDialog(api as never, { db, refresh: () => order.push("refresh") } as never, "openai", {
+            applyNativeSelection: async () => {
+                order.push("apply");
+                return true;
+            },
+            onComplete: () => order.push("complete"),
+        });
+        selectProps?.onSelect?.(selectProps.options[0]);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(order).toEqual(["refresh", "apply", "complete"]);
+    });
+
+    test("can persist without replaying through the native model dialog", async () => {
+        await import("@opentui/solid/runtime-plugin" + "-support");
+        const { openProviderModelDialog } = await import("../../src/tui/components/provider-model-dialog" + ".tsx");
+        const { setProviderModel } = await import("../../src/core/priority");
+        const db = createDb();
+        saveAccount(db, "openai", "op1", { type: "api", key: "sk" });
+        const toasts: unknown[] = [];
+        const cleared = { value: false };
+        const order: string[] = [];
+        let selectProps: SelectProps | undefined;
+
+        const api = createApi((props) => (selectProps = props), toasts, cleared);
+
+        openProviderModelDialog(api as never, { db, refresh: () => order.push("refresh") } as never, "openai", {
+            applyNativeSelection: false,
+            onSelected: (model) => setProviderModel(db, model.providerID, model.modelID),
+            onComplete: () => order.push("complete"),
+        });
+        selectProps?.onSelect?.(selectProps.options[0]);
+        await Promise.resolve();
+
+        expect(listProviderPriority(db).find((entry) => entry.providerID === "openai")?.modelID).toBe("gpt-5.5");
+        expect(cleared.value).toBe(true);
+        expect(order).toEqual(["refresh", "complete"]);
+        expect(toasts).toEqual([]);
+    });
 });
