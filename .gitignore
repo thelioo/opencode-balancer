@@ -16,7 +16,6 @@ node_modules
 
 # git
 .worktrees/
-
-# env
-*.env
-.env.*
+.agents/
+.claude/
+docs/
