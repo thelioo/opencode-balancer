@@ -3,3 +3,6 @@ dist
 *.tgz
 .DS_Store
 .worktrees/
+.agents/
+.claude/
+docs/
