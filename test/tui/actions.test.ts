@@ -198,7 +198,7 @@ describe("tui actions", () => {
         expect(appliedProviders).toEqual([]);
     });
 
-    test("activateAccount does not apply the provider model natively when switching accounts inside the selected provider", async () => {
+    test("activateAccount applies the provider model natively when the session provider differs from the selected provider", async () => {
         const { db, state } = createState();
         saveAccount(db, "openai", "work", { type: "api", key: "sk-openai-work" });
         saveAccount(db, "openai", "personal", { type: "api", key: "sk-openai-personal" });
@@ -219,7 +219,7 @@ describe("tui actions", () => {
             },
         });
 
-        expect(appliedProviders).toEqual([]);
+        expect(appliedProviders).toEqual(["openai"]);
     });
 
     test("activateAccount sends the DB-selected account auth instead of stale state auth", async () => {

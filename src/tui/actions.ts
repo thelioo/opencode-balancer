@@ -60,7 +60,7 @@ export async function activateAccount(
     }
 
     state.refresh();
-    const providerChanged = previousProviderID ? previousProviderID !== providerID : options.sessionProviderID !== providerID;
+    const providerChanged = (options.sessionProviderID ?? previousProviderID) !== providerID;
     if (providerChanged) {
         await options.applyNativeProviderModel?.(providerID);
     }

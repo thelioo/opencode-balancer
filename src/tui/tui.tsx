@@ -2,13 +2,14 @@
 
 import type { TuiPlugin, TuiPluginModule, TuiRouteCurrent } from "@opencode-ai/plugin/tui";
 import { createComponent } from "solid-js";
-import { getSelectedModel } from "../core/accounts";
-import { setProviderModel } from "../core/priority";
+import { getSelectedAccount, getSelectedModel } from "../core/accounts";
+import { getBalancingEnabled, setProviderModel } from "../core/priority";
 import { activateAccount, removeAccountFromTui } from "./actions";
 import { createTuiBalancerBarSync } from "./balancer-bar-sync";
 import { openNativeConnect } from "./connect";
 import { createNativeModelApplier } from "./native-model-apply";
 import { providerModelOptions } from "./provider-models";
+import { createSelectedAccountBarSync } from "./selected-account-bar-sync";
 import { createBalancerTuiState } from "./state";
 import { createUsageAutoRefresh } from "./usage-auto-refresh";
 
@@ -46,6 +47,8 @@ const tui: TuiPlugin = async (api) => {
     const balancerBarSync = createTuiBalancerBarSync(api, state);
     const nativeModelApplier = createNativeModelApplier(api);
     let dashboardReturnRoute: TuiRouteCurrent | undefined;
+    let nativeProviderID: string | undefined;
+    let sessionProviderID: string | undefined;
 
     const applyNativeProviderModel = async (providerID: string) => {
         const modelOptions = providerModelOptions(api.state.provider, providerID);
@@ -54,6 +57,19 @@ const tui: TuiPlugin = async (api) => {
         if (!option) return false;
         return nativeModelApplier({ providerID: option.providerID, modelID: option.modelID }, option.title);
     };
+
+    const applyNativeProviderModelAndTrack = async (providerID: string) => {
+        const applied = await applyNativeProviderModel(providerID);
+        if (applied) nativeProviderID = providerID;
+        return applied;
+    };
+
+    const selectedAccountBarSync = createSelectedAccountBarSync({
+        dialogOpen: () => api.ui.dialog.open,
+        selectedProvider: () => (getBalancingEnabled(state.db) ? undefined : getSelectedAccount(state.db)?.providerID),
+        currentProvider: () => nativeProviderID ?? sessionProviderID,
+        applyProvider: applyNativeProviderModelAndTrack,
+    });
 
     api.lifecycle.onDispose(() => {
         usageAutoRefresh.dispose();
@@ -128,7 +144,9 @@ const tui: TuiPlugin = async (api) => {
     api.slots.register({
         slots: {
             session_prompt_right(_ctx, value) {
+                sessionProviderID = inferProviderID(api.state.session.get(value.session_id));
                 void usageAutoRefresh.refreshForPrompt();
+                void selectedAccountBarSync.maybeSync();
                 void balancerBarSync.maybeSync();
                 return createComponent(statusIndicatorModule.BalancerStatusIndicator, {
                     api,
@@ -141,11 +159,12 @@ const tui: TuiPlugin = async (api) => {
                     api,
                     state,
                     openDashboard,
-                    activateAccount: (providerID, alias) =>
-                        activateAccount(api, state, providerID, alias, {
-                            sessionProviderID: inferProviderID(api.state.session.get(value.session_id)),
-                            applyNativeProviderModel,
-                        }),
+                    activateAccount: (providerID, alias) => {
+                        return activateAccount(api, state, providerID, alias, {
+                            sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id)),
+                            applyNativeProviderModel: applyNativeProviderModelAndTrack,
+                        });
+                    },
                 });
             },
         },

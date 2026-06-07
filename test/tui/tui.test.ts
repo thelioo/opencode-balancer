@@ -140,7 +140,7 @@ describe("tui plugin", () => {
         const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
 
         expect(source).toContain("providerID: () => inferProviderID(api.state.session.get(value.session_id))");
-        expect(source).toContain("sessionProviderID: inferProviderID(api.state.session.get(value.session_id))");
+        expect(source).toContain("sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id))");
     });
 
     test("does not open the balancer model picker from sidebar account activation", async () => {
@@ -159,5 +159,23 @@ describe("tui plugin", () => {
 
         expect(priorityRoute).toContain("openProviderModelDialog(api, state, providerID");
         expect(priorityRoute).toContain("applyNativeSelection: false");
+    });
+
+    test("tracks the last natively applied provider before activating sidebar accounts", async () => {
+        const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
+        const sidebarContent = source.slice(source.indexOf("sidebar_content"), source.indexOf("});", source.indexOf("sidebar_content")));
+
+        expect(source).toContain("let nativeProviderID: string | undefined");
+        expect(sidebarContent).toContain("sessionProviderID: nativeProviderID ?? inferProviderID(api.state.session.get(value.session_id))");
+        expect(source).toContain("if (applied) nativeProviderID = providerID");
+    });
+
+    test("syncs the native bar to the selected balancer account on session render", async () => {
+        const source = await Bun.file(join(import.meta.dir, "../../src/tui/tui.tsx")).text();
+        const promptRight = source.slice(source.indexOf("session_prompt_right"), source.indexOf("sidebar_content"));
+
+        expect(source).toContain("createSelectedAccountBarSync");
+        expect(promptRight).toContain("sessionProviderID = inferProviderID(api.state.session.get(value.session_id))");
+        expect(promptRight).toContain("void selectedAccountBarSync.maybeSync()");
     });
 });
