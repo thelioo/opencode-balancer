@@ -40,16 +40,16 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Check TypeScript
-        run: bun checktypes
+        run: bun run checktypes
 
       - name: Run lint
         run: bun run lint
 
       - name: Run tests
-        run: bun test
+        run: bun run test
 
       - name: Build package
-        run: bun build
+        run: bun run build
 
       - name: Create version PR or publish npm
         id: changesets

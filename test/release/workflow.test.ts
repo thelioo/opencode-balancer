@@ -48,9 +48,9 @@ describe("release workflow", () => {
 		expect(workflow).toContain("createGithubReleases: true");
 		expect(workflow).toContain("NPM_CONFIG_PROVENANCE: true");
 		expect(workflow).not.toContain("NPM_TOKEN");
-		expect(workflow).toContain("bun check");
-		expect(workflow).toContain("bun test");
-		expect(workflow).toContain("bun build");
+		expect(workflow).toContain("bun run checktypes");
+		expect(workflow).toContain("bun run test");
+		expect(workflow).toContain("bun run build");
 		expect(workflow).toContain("git push --follow-tags");
 		expect(workflow).not.toContain("gh release create");
 		expect(workflow).toContain("steps.changesets.outputs.published == 'true'");
