@@ -1,5 +1,22 @@
-node_modules
+# agents
+.agents/
+.claude/
+.opencode/
+docs/
+
+# output
 dist
 *.tgz
+
+# dependencies
+node_modules
+
+# metadata
 .DS_Store
+
+# git
 .worktrees/
+
+# env
+*.env
+.env.*
