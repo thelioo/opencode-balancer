@@ -47,10 +47,16 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Detect release changesets
+        id: release_changesets
+        run: bun scripts/release/has-changesets.ts
+
       - name: Version packages
+        if: steps.release_changesets.outputs.has_changesets == 'true'
         run: bun run version
 
       - name: Commit release version
+        if: steps.release_changesets.outputs.has_changesets == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -59,11 +65,41 @@ jobs:
             git commit -m "chore: release package"
           fi
 
+      - name: Read package metadata
+        id: package_metadata
+        run: bun scripts/release/package-metadata.ts
+
       - name: Build package
         run: bun run build
 
+      - name: Check npm package
+        id: npm_package
+        env:
+          PACKAGE_NAME: ${{ steps.package_metadata.outputs.name }}
+          PACKAGE_VERSION: ${{ steps.package_metadata.outputs.version }}
+        run: bun scripts/release/check-npm-published.ts
+
       - name: Publish npm
+        if: steps.npm_package.outputs.is_published == 'false'
         run: bun run release
 
+      - name: Ensure git tag
+        env:
+          RELEASE_TAG: ${{ steps.package_metadata.outputs.tag }}
+        run: bun scripts/release/ensure-tag.ts
+
+      - name: Prepare release notes
+        env:
+          PACKAGE_VERSION: ${{ steps.package_metadata.outputs.version }}
+        run: bun scripts/release/write-release-notes.ts
+
       - name: Push release commit and tags
-        run: git push origin HEAD:main --follow-tags
+        env:
+          RELEASE_TAG: ${{ steps.package_metadata.outputs.tag }}
+        run: bun scripts/release/push-release-refs.ts
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.package_metadata.outputs.tag }}
+        run: bun scripts/release/create-github-release.ts

@@ -47,7 +47,40 @@ describe("release workflow", () => {
 		expect(workflow).toContain("bun run checktypes");
 		expect(workflow).toContain("bun run test");
 		expect(workflow).toContain("bun run build");
-		expect(workflow).toContain("git push origin HEAD:main --follow-tags");
-		expect(workflow).not.toContain("gh release create");
+		expect(workflow).toContain("bun scripts/release/push-release-refs.ts");
+		expect(workflow).toContain("bun scripts/release/create-github-release.ts");
+		expect(workflow).not.toContain("node <<'NODE'");
+	});
+
+	test("workflow skips versioning when no changesets are pending", () => {
+		const workflow = read(".github/workflows/release.yml");
+
+		expect(workflow).toContain("id: release_changesets");
+		expect(workflow).toContain("bun scripts/release/has-changesets.ts");
+		expect(workflow).toContain(
+			"if: steps.release_changesets.outputs.has_changesets == 'true'",
+		);
+	});
+
+	test("workflow skips npm publish when package version already exists", () => {
+		const workflow = read(".github/workflows/release.yml");
+
+		expect(workflow).toContain("id: package_metadata");
+		expect(workflow).toContain("bun scripts/release/package-metadata.ts");
+		expect(workflow).toContain("id: npm_package");
+		expect(workflow).toContain("bun scripts/release/check-npm-published.ts");
+		expect(workflow).toContain(
+			"if: steps.npm_package.outputs.is_published == 'false'",
+		);
+	});
+
+	test("workflow can create a GitHub release from the changelog on rerun", () => {
+		const workflow = read(".github/workflows/release.yml");
+
+		expect(workflow).toContain("bun scripts/release/ensure-tag.ts");
+		expect(workflow).toContain("bun scripts/release/write-release-notes.ts");
+		expect(workflow).toContain("bun scripts/release/push-release-refs.ts");
+		expect(workflow).toContain("bun scripts/release/create-github-release.ts");
+		expect(workflow).toContain("GH_TOKEN: ${{ github.token }}");
 	});
 });
