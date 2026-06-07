@@ -10,10 +10,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const sourceRoot = join(root, "src", "tui");
-const targetRoot = join(root, "dist", "tui");
+const coreSourceRoot = join(root, "src", "core");
+const coreTargetRoot = join(root, "dist", "core");
+const serverSourceRoot = join(root, "src", "server");
+const serverTargetRoot = join(root, "dist", "server");
+const tuiSourceRoot = join(root, "src", "tui");
+const tuiTargetRoot = join(root, "dist", "tui");
 
-function copyTuiSource(sourceDir, targetDir) {
+function copySource(sourceDir: string, targetDir: string) {
 	mkdirSync(targetDir, { recursive: true });
 
 	for (const entry of readdirSync(sourceDir)) {
@@ -22,7 +26,7 @@ function copyTuiSource(sourceDir, targetDir) {
 		const stats = statSync(sourcePath);
 
 		if (stats.isDirectory()) {
-			copyTuiSource(sourcePath, targetPath);
+			copySource(sourcePath, targetPath);
 			continue;
 		}
 
@@ -37,8 +41,10 @@ function copyTuiSource(sourceDir, targetDir) {
 	}
 }
 
-function rmGeneratedFile(path) {
+function rmGeneratedFile(path: string) {
 	if (existsSync(path)) rmSync(path);
 }
 
-copyTuiSource(sourceRoot, targetRoot);
+copySource(coreSourceRoot, coreTargetRoot);
+copySource(serverSourceRoot, serverTargetRoot);
+copySource(tuiSourceRoot, tuiTargetRoot);

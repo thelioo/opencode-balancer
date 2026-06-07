@@ -18,12 +18,10 @@
 	},
 	"exports": {
 		".": {
-			"default": "./dist/index.js",
-			"types": "./dist/index.d.ts"
+			"default": "./dist/index.js"
 		},
 		"./tui": {
-			"default": "./dist/tui/tui.tsx",
-			"types": "./dist/tui/tui.d.ts"
+			"default": "./dist/tui/tui.tsx"
 		}
 	},
 	"files": [
@@ -47,7 +45,7 @@
 		"url": "git+https://github.com/thelioo/opencode-balancer.git"
 	},
 	"scripts": {
-		"build": "tsgo --project tsconfig.json && node scripts/copy-tui-source.mjs",
+		"build": "bun scripts/build.ts",
 		"changeset": "changeset",
 		"checktypes": "tsgo --noEmit --project tsconfig.json",
 		"format": "biome format --write src test package.json tsconfig.json",
@@ -55,12 +53,11 @@
 		"lint:fix": "biome check . --fix",
 		"lint:unsafe": "biome check . --fix --unsafe",
 		"prepare": "husky",
-		"prepublishOnly": "npm run build",
+		"prepublishOnly": "bun run build",
 		"release": "changeset publish",
 		"test": "bun test",
 		"version-packages": "changeset version && bun install --lockfile-only"
 	},
 	"type": "module",
-	"types": "./dist/index.d.ts",
 	"version": "0.1.8"
 }

@@ -1,6 +1,5 @@
 {
 	"compilerOptions": {
-		"declaration": true,
 		"jsx": "react-jsx",
 		"jsxImportSource": "@opentui/solid",
 		"module": "ESNext",
@@ -8,7 +7,6 @@
 		"outDir": "dist",
 		"rootDir": "src",
 		"skipLibCheck": true,
-		"sourceMap": true,
 		"strict": true,
 		"target": "ESNext",
 		"types": ["bun"]
