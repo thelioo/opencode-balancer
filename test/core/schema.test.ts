@@ -169,7 +169,7 @@ describe("schema migrations", () => {
 		expect(second).toBe(first);
 	});
 
-	test("configures sqlite busy timeout to reduce lock retries", () => {
+	test("configures sqlite busy timeout for lock contention retries", () => {
 		const db = openBalancerDatabase(tempDb());
 		const row = db.query<{ timeout: number }, []>("PRAGMA busy_timeout").get();
 		expect(row?.timeout).toBe(5000);
