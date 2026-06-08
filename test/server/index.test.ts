@@ -17,6 +17,7 @@ import { setBalancingEnabled, setProviderModel } from "../../src/core/priority";
 import { migrate } from "../../src/core/schema";
 import type { AuthInfo } from "../../src/core/types";
 import {
+	__testClearSessionSelections,
 	configureFallbackCommand,
 	createServerHooks,
 } from "../../src/server/index";
@@ -41,6 +42,7 @@ function db() {
 
 afterEach(() => {
 	__testClearPendingRequests();
+	__testClearSessionSelections();
 	delete Bun.env.OPENCODE_AUTH_CONTENT;
 	for (const path of paths) closeBalancerDatabase(path);
 	for (const dir of dirs) rmSync(dir, { force: true, recursive: true });
@@ -222,6 +224,97 @@ describe("server plugin config", () => {
 			providerID: "openai",
 		});
 		expect(getActiveAccount(database, "openai")?.alias).toBe("op1");
+	});
+
+	test("chat message keeps the same account for the same session while it stays healthy", async () => {
+		const database = db();
+		saveAccount(database, "github-copilot", "gh1", {
+			access: "access",
+			expires: Date.now() + 1000,
+			refresh: "refresh",
+			type: "oauth",
+		});
+		saveAccount(database, "openai", "op1", { key: "sk", type: "api" });
+		setProviderModel(database, "github-copilot", "gemini-2.5-pro");
+		setProviderModel(database, "openai", "gpt-5.5");
+		setBalancingEnabled(database, true);
+		const hooks = createServerHooks({ client: {}, db: database });
+		const first = {
+			message: { model: { modelID: "gpt-5.5", providerID: "openai" } },
+			parts: [],
+		};
+
+		await hooks["chat.message"]?.(
+			{ agent: "build", sessionID: "sticky-session" } as any,
+			first as any,
+		);
+		expect(first.message.model).toEqual({
+			modelID: "gpt-5.5",
+			providerID: "openai",
+		});
+
+		const second = {
+			message: {
+				model: undefined as undefined | { providerID: string; modelID: string },
+			},
+			parts: [],
+		};
+		await hooks["chat.message"]?.(
+			{ agent: "build", sessionID: "sticky-session" } as any,
+			second as any,
+		);
+
+		expect(second.message.model).toEqual({
+			modelID: "gpt-5.5",
+			providerID: "openai",
+		});
+		expect(getActiveAccount(database, "openai")?.alias).toBe("op1");
+	});
+
+	test("chat message switches a sticky account when it becomes unavailable", async () => {
+		const database = db();
+		saveAccount(database, "github-copilot", "gh1", {
+			access: "access",
+			expires: Date.now() + 1000,
+			refresh: "refresh",
+			type: "oauth",
+		});
+		saveAccount(database, "openai", "op1", { key: "sk", type: "api" });
+		setProviderModel(database, "github-copilot", "gemini-2.5-pro");
+		setProviderModel(database, "openai", "gpt-5.5");
+		setBalancingEnabled(database, true);
+		const hooks = createServerHooks({ client: {}, db: database });
+		const first = {
+			message: { model: { modelID: "gpt-5.5", providerID: "openai" } },
+			parts: [],
+		};
+
+		await hooks["chat.message"]?.(
+			{ agent: "build", sessionID: "sticky-failover-session" } as any,
+			first as any,
+		);
+		database
+			.query(
+				"UPDATE accounts SET rate_limited_until = ? WHERE provider_id = 'openai' AND alias = 'op1'",
+			)
+			.run(Date.now() + 60_000);
+
+		const second = {
+			message: {
+				model: undefined as undefined | { providerID: string; modelID: string },
+			},
+			parts: [],
+		};
+		await hooks["chat.message"]?.(
+			{ agent: "build", sessionID: "sticky-failover-session" } as any,
+			second as any,
+		);
+
+		expect(second.message.model).toEqual({
+			modelID: "gemini-2.5-pro",
+			providerID: "github-copilot",
+		});
+		expect(getActiveAccount(database, "github-copilot")?.alias).toBe("gh1");
 	});
 
 	test("chat message falls over to the next provider when the top one is rate limited (balancing on)", async () => {

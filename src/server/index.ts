@@ -6,6 +6,7 @@ import {
 	tool,
 } from "@opencode-ai/plugin";
 import {
+	getAccount,
 	getActiveAccount,
 	getSelectedAccount,
 	getSelectedModel,
@@ -13,7 +14,11 @@ import {
 } from "../core/accounts";
 import { openBalancerDatabase } from "../core/database";
 import { storePath } from "../core/path";
-import { getBalancingEnabled, resolveActiveSelection } from "../core/priority";
+import {
+	getBalancingEnabled,
+	listProviderPriority,
+	resolveActiveSelection,
+} from "../core/priority";
 import { migrate } from "../core/schema";
 import { runFallbackBalancerCommand } from "./commands";
 import { installFetchPatch } from "./fetch-patch";
@@ -26,6 +31,37 @@ import {
 
 export function configureFallbackCommand(cfg: Config) {
 	if (!cfg.command?.balancer) return;
+}
+
+type SessionSelection = {
+	providerID: string;
+	alias: string;
+};
+
+const sessionSelections = new Map<string, SessionSelection>();
+
+export function __testClearSessionSelections() {
+	sessionSelections.clear();
+}
+
+function resolveSessionSelection(db: Database, selection: SessionSelection) {
+	const account = getAccount(db, selection.providerID, selection.alias);
+	if (!account || account.disabled) return undefined;
+
+	const timestamp = Date.now();
+	if (account.rateLimitedUntil && account.rateLimitedUntil > timestamp)
+		return undefined;
+
+	const provider = listProviderPriority(db).find(
+		(entry) => entry.providerID === selection.providerID,
+	);
+	if (!provider?.enabled || !provider.modelID) return undefined;
+
+	return {
+		account,
+		modelID: provider.modelID,
+		providerID: provider.providerID,
+	};
 }
 
 function runSafeFallbackBalancerCommand(db: Database, raw: string) {
@@ -58,10 +94,32 @@ export function createServerHooks({
 			output.headers[INTERNAL_REQUEST_HEADER] = requestID;
 		},
 
-		"chat.message": async (_input, output) => {
-			// Balancing on: the priority list decides the provider/model for every
-			// message (recomputed per message -> failover and recovery for free).
+		"chat.message": async (input, output) => {
+			// Balancing on: keep the same session account while healthy, otherwise
+			// resolve a fresh provider/model from priority.
 			if (getBalancingEnabled(db)) {
+				const sessionID =
+					typeof input.sessionID === "string" ? input.sessionID : undefined;
+				if (sessionID) {
+					const sticky = sessionSelections.get(sessionID);
+					if (sticky) {
+						const selection = resolveSessionSelection(db, sticky);
+						if (selection) {
+							setActiveAccount(
+								db,
+								selection.providerID,
+								selection.account.alias,
+							);
+							output.message.model = {
+								modelID: selection.modelID,
+								providerID: selection.providerID,
+							};
+							return;
+						}
+						sessionSelections.delete(sessionID);
+					}
+				}
+
 				const selection = resolveActiveSelection(
 					db,
 					undefined,
@@ -69,6 +127,12 @@ export function createServerHooks({
 				);
 				if (!selection) return;
 				setActiveAccount(db, selection.providerID, selection.account.alias);
+				if (sessionID) {
+					sessionSelections.set(sessionID, {
+						alias: selection.account.alias,
+						providerID: selection.providerID,
+					});
+				}
 				output.message.model = {
 					modelID: selection.modelID,
 					providerID: selection.providerID,
