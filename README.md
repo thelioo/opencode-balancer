@@ -50,7 +50,7 @@ Add the plugin to your opencode config so the server hooks can run:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@thelioo/opencode-balancer@latest"]
+  "plugin": ["@thelioo/opencode-balancer"]
 }
 ```
 
@@ -59,9 +59,11 @@ Then add the same plugin to your opencode TUI config so the dashboard can load:
 ```json
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["@thelioo/opencode-balancer@latest"]
+  "plugin": ["@thelioo/opencode-balancer"]
 }
 ```
+
+Use the package name without an explicit `@latest` tag so opencode can refresh to newer published versions on restart.
 
 Then restart opencode. The same package provides both the server hooks and the TUI dashboard.
 
@@ -180,7 +182,7 @@ And add the same local path to your TUI config:
 
 | Problem | What to try |
 | --- | --- |
-| Plugin does not load | Confirm `plugin` is singular in opencode config, restart opencode, and check that the package name is `@thelioo/opencode-balancer@latest`. |
+| Plugin does not load | Confirm `plugin` is singular in opencode config, restart opencode, and check that the package name is `@thelioo/opencode-balancer`. |
 | Dashboard does not open | Confirm `tui.json` also contains the plugin, restart opencode, then try `Ctrl+B`, `/balancer`, or the command palette. |
 | Account was not saved | Use **New account** from the Balancer dashboard and complete opencode's native provider connection flow. |
 | Provider is skipped | Open the priority matrix and confirm the provider is enabled and has a model selected. |

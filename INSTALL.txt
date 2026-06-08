@@ -11,7 +11,7 @@ Important rules
 - Preserve existing opencode config, TUI config, plugins, comments, formatting, providers, agents, MCP servers, and permissions whenever possible.
 - Use the singular key "plugin", not "plugins".
 - Add the plugin only if it is not already present.
-- Prefer @thelioo/opencode-balancer@latest for user installs.
+- Prefer @thelioo/opencode-balancer (without @latest) for user installs.
 - Keep config changes minimal and do not remove unrelated user settings.
 
 Steps
@@ -27,7 +27,7 @@ Steps
    - If the config is JSON, keep JSON syntax valid.
 
 3. Add this plugin entry to the opencode config plugin array:
-   @thelioo/opencode-balancer@latest
+   @thelioo/opencode-balancer
 
 4. Locate the user's opencode TUI config.
    - Prefer ~/.config/opencode/tui.jsonc if it exists.
@@ -41,7 +41,7 @@ Steps
    - If the config is JSON, keep JSON syntax valid.
 
 6. Add this plugin entry to the TUI config plugin array:
-   @thelioo/opencode-balancer@latest
+   @thelioo/opencode-balancer
 
 7. Save both configs.
 
@@ -52,13 +52,13 @@ Steps
 Expected config shape
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@thelioo/opencode-balancer@latest"]
+  "plugin": ["@thelioo/opencode-balancer"]
 }
 
 Expected TUI config shape
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["@thelioo/opencode-balancer@latest"]
+  "plugin": ["@thelioo/opencode-balancer"]
 }
 
 After restart
@@ -87,8 +87,8 @@ TUI-only workflow
 /balancer opens the Balancer dashboard in the TUI. Account management, provider/model priority, supported usage snapshots, and balancing settings are handled from the TUI only.
 
 Verification
-- Confirm the opencode config contains @thelioo/opencode-balancer@latest in the plugin array.
-- Confirm the opencode TUI config contains @thelioo/opencode-balancer@latest in the plugin array.
+- Confirm the opencode config contains @thelioo/opencode-balancer in the plugin array.
+- Confirm the opencode TUI config contains @thelioo/opencode-balancer in the plugin array.
 - Confirm no existing plugin entries were removed.
 - Confirm the user restarted opencode after the config change.
 - Confirm the Balancer dashboard opens with Ctrl+B, /balancer, or the command palette.
