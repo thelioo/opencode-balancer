@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.2
+
+### Patch Changes
+
+- a3b2716: Mitigate intermittent SQLite lock failures by configuring a connection-level busy timeout during database initialization.
+
 ## 0.2.1
 
 ### Patch Changes
