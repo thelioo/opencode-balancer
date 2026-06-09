@@ -42,7 +42,9 @@ export function openBalancerDatabase(path: string) {
 	mkdirSync(dirname(path), { recursive: true });
 	const database = new Database(path);
 	try {
-		database.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
+		database.exec(
+			"PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;",
+		);
 		secureDatabaseFiles(path);
 		databases.set(path, database);
 		return database;
