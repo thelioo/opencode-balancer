@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.1
+
+### Patch Changes
+
+- 2843fae: Document plugin installation instructions using the unversioned package entry instead of `@latest`.
+
 ## 0.2.0
 
 ### Minor Changes
