@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.3
+
+### Patch Changes
+
+- 752d8e9: Show the plugin version in the dashboard title.
+
 ## 0.2.2
 
 ### Patch Changes
