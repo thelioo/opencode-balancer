@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.5
+
+### Patch Changes
+
+- e483c2d: Publish a dummy patch release to test plugin cache auto-update behavior.
+
 ## 0.2.4
 
 ### Patch Changes
