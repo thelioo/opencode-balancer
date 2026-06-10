@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.4
+
+### Patch Changes
+
+- 809fdf6: Invalidate only the active outdated `@latest` opencode plugin cache sandbox after detecting a newer npm release, then notify the user to restart opencode.
+
 ## 0.2.3
 
 ### Patch Changes
