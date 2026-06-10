@@ -7,6 +7,22 @@ const expectSourceToContain = (source: string, snippet: string) =>
 	expect(compact(source)).toContain(compact(snippet));
 
 describe("Dashboard", () => {
+	test("renders plugin version in the dashboard title", () => {
+		const source = readFileSync(
+			join(import.meta.dir, "../../src/tui/components/dashboard.tsx"),
+			"utf8",
+		);
+		const packageJson = JSON.parse(
+			readFileSync(join(import.meta.dir, "../../package.json"), "utf8"),
+		) as { version: string };
+
+		expect(packageJson.version).toBeTruthy();
+		expect(source).toContain(
+			'from "../../../package.json" with { type: "json" }',
+		);
+		expectSourceToContain(source, `opencode-balancer v{packageJson.version}`);
+	});
+
 	test("renders new account as an accounts row instead of a header action", () => {
 		const source = readFileSync(
 			join(import.meta.dir, "../../src/tui/components/dashboard.tsx"),

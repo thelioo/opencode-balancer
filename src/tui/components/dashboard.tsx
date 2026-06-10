@@ -9,6 +9,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import packageJson from "../../../package.json" with { type: "json" };
 import { listAccounts } from "../../core/accounts";
 import { getBalancingEnabled, setBalancingEnabled } from "../../core/priority";
 import { getUsageSnapshot } from "../../core/usage/store";
@@ -314,7 +315,7 @@ export function Dashboard(props: {
 		>
 			<box flexDirection="column" flexShrink={0} gap={0} paddingBottom={1}>
 				<text fg={theme().primary} overflow="hidden" truncate wrapMode="none">
-					opencode-balancer{compact() ? "" : " control center"}
+					opencode-balancer v{packageJson.version}
 				</text>
 				<Show when={!compact()}>
 					<text
