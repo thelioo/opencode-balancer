@@ -5,6 +5,7 @@ import {
 	type Plugin,
 	tool,
 } from "@opencode-ai/plugin";
+import packageJson from "../../package.json" with { type: "json" };
 import {
 	getActiveAccount,
 	getSelectedAccount,
@@ -15,6 +16,7 @@ import { openBalancerDatabase } from "../core/database";
 import { storePath } from "../core/path";
 import { getBalancingEnabled, resolveActiveSelection } from "../core/priority";
 import { migrate } from "../core/schema";
+import { checkAndInvalidateOutdatedPackageCache } from "./cache-update";
 import { runFallbackBalancerCommand } from "./commands";
 import { installFetchPatch } from "./fetch-patch";
 import { setNativeAuth, showToast } from "./native";
@@ -23,6 +25,8 @@ import {
 	INTERNAL_REQUEST_HEADER,
 	setPendingRequest,
 } from "./request-balancer";
+
+const PACKAGE_NAME = "@thelioo/opencode-balancer";
 
 export function configureFallbackCommand(cfg: Config) {
 	if (!cfg.command?.balancer) return;
@@ -129,6 +133,12 @@ export const serverPlugin = (async ({ client }) => {
 	const db = openBalancerDatabase(storePath());
 	migrate(db);
 	installFetchPatch(db, client);
+	checkAndInvalidateOutdatedPackageCache({
+		currentVersion: packageJson.version,
+		moduleUrl: import.meta.url,
+		notify: (message) => showToast(client, message, "success"),
+		packageName: PACKAGE_NAME,
+	}).catch(() => {});
 
 	return createServerHooks({ client, db });
 }) satisfies Plugin;
