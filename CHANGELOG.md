@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.9
+
+### Patch Changes
+
+- e4b36ea: Dummy patch release to verify the startup auto-update end to end.
+
 ## 0.2.8
 
 ### Patch Changes
