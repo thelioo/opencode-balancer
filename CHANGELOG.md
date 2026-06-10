@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.6
+
+### Patch Changes
+
+- 4f43755: Run the plugin cache update check after the first root session is created, matching the deferred startup pattern used by other opencode plugins.
+
 ## 0.2.5
 
 ### Patch Changes
