@@ -316,7 +316,6 @@ export function Dashboard(props: {
 			<box flexDirection="column" flexShrink={0} gap={0} paddingBottom={1}>
 				<text fg={theme().primary} overflow="hidden" truncate wrapMode="none">
 					opencode-balancer v{packageJson.version}
-					{compact() ? "" : " control center"}
 				</text>
 				<Show when={!compact()}>
 					<text
