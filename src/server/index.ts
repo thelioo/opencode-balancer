@@ -41,12 +41,21 @@ function runSafeFallbackBalancerCommand(db: Database, raw: string) {
 }
 
 export function createServerHooks({
+	cacheUpdate,
 	db,
 	client,
 }: {
+	cacheUpdate?: () => Promise<unknown>;
 	db: Database;
 	client: any;
 }): Hooks {
+	let cacheUpdateChecked = false;
+	const runCacheUpdate = () => {
+		if (cacheUpdateChecked) return;
+		cacheUpdateChecked = true;
+		cacheUpdate?.().catch(() => {});
+	};
+
 	return {
 		"chat.headers": async (input, output) => {
 			const providerID = input.model.providerID;
@@ -105,6 +114,11 @@ export function createServerHooks({
 		config: async (cfg) => {
 			configureFallbackCommand(cfg);
 		},
+		event: async ({ event }: any) => {
+			if (event.type !== "session.created") return;
+			if (event.properties?.info?.parentID) return;
+			runCacheUpdate();
+		},
 
 		"experimental.chat.messages.transform": async (_input, output) => {
 			output.messages = output.messages.filter((message) => {
@@ -133,12 +147,16 @@ export const serverPlugin = (async ({ client }) => {
 	const db = openBalancerDatabase(storePath());
 	migrate(db);
 	installFetchPatch(db, client);
-	checkAndInvalidateOutdatedPackageCache({
-		currentVersion: packageJson.version,
-		moduleUrl: import.meta.url,
-		notify: (message) => showToast(client, message, "success"),
-		packageName: PACKAGE_NAME,
-	}).catch(() => {});
 
-	return createServerHooks({ client, db });
+	return createServerHooks({
+		cacheUpdate: () =>
+			checkAndInvalidateOutdatedPackageCache({
+				currentVersion: packageJson.version,
+				moduleUrl: import.meta.url,
+				notify: (message) => showToast(client, message, "success"),
+				packageName: PACKAGE_NAME,
+			}),
+		client,
+		db,
+	});
 }) satisfies Plugin;

@@ -72,11 +72,36 @@ describe("server plugin config", () => {
 	test("creates fallback balancer hooks and tool", () => {
 		const hooks = createServerHooks({ client: {}, db: db() });
 
+		expect(hooks.event).toBeFunction();
 		expect(hooks.config).toBeFunction();
 		expect(hooks["chat.headers"]).toBeFunction();
 		expect(hooks["command.execute.before"]).toBeFunction();
 		expect(hooks["experimental.chat.messages.transform"]).toBeFunction();
 		expect(hooks.tool?.balancer_command).toBeDefined();
+	});
+
+	test("runs the cache update check once after a root session is created", async () => {
+		const calls: string[] = [];
+		const hooks = createServerHooks({
+			cacheUpdate: async () => calls.push("check"),
+			client: {},
+			db: db(),
+		});
+
+		await hooks.event?.({
+			event: { properties: {}, type: "session.created" },
+		} as any);
+		await hooks.event?.({
+			event: { properties: {}, type: "session.created" },
+		} as any);
+		await hooks.event?.({
+			event: {
+				properties: { info: { parentID: "parent" } },
+				type: "session.created",
+			},
+		} as any);
+
+		expect(calls).toEqual(["check"]);
 	});
 
 	test("chat headers marks requests for active accounts", async () => {
