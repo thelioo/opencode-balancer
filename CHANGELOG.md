@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.7
+
+### Patch Changes
+
+- 7538af1: Publish another dummy patch release to test deferred plugin cache auto-update behavior.
+
 ## 0.2.6
 
 ### Patch Changes
