@@ -26,7 +26,6 @@ export type CacheUpdateCheckInput = Omit<
 	"latestVersion"
 > & {
 	fetchLatestVersion?: () => Promise<string | undefined>;
-	notify?: (message: string) => Promise<unknown>;
 };
 
 function opencodeCacheDir() {
@@ -153,7 +152,6 @@ export async function fetchNpmLatestVersion(packageName: string) {
 
 export async function checkAndInvalidateOutdatedPackageCache({
 	fetchLatestVersion,
-	notify,
 	...input
 }: CacheUpdateCheckInput): Promise<CacheInvalidationResult> {
 	const latestVersion = await (
@@ -162,16 +160,8 @@ export async function checkAndInvalidateOutdatedPackageCache({
 	if (!latestVersion)
 		return { reason: "latest-version-unavailable", removed: [] };
 
-	const result = invalidateOutdatedPackageCache({
+	return invalidateOutdatedPackageCache({
 		...input,
 		latestVersion,
 	});
-
-	if (result.removed.length > 0) {
-		await notify?.(
-			`opencode-balancer v${latestVersion} is ready. Restart opencode to update from v${input.currentVersion}.`,
-		);
-	}
-
-	return result;
 }

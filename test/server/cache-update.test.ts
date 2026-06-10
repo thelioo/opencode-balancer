@@ -126,7 +126,7 @@ describe("cache update invalidation", () => {
 		}
 	});
 
-	test("checks latest version, invalidates the exact cache, and notifies for restart", async () => {
+	test("checks latest version and invalidates the exact cache", async () => {
 		const dir = join(
 			tmpdir(),
 			`opencode-balancer-cache-${crypto.randomUUID()}`,
@@ -137,7 +137,6 @@ describe("cache update invalidation", () => {
 				"@thelioo/opencode-balancer@latest",
 				"0.2.2",
 			);
-			const toasts: string[] = [];
 
 			const result = await checkAndInvalidateOutdatedPackageCache({
 				cacheDir: dir,
@@ -145,15 +144,11 @@ describe("cache update invalidation", () => {
 				fetchLatestVersion: async () => "0.2.3",
 				moduleUrl: pathToFileURL(join(latest.packageDir, "dist", "index.js"))
 					.href,
-				notify: async (message) => toasts.push(message),
 				packageName: PACKAGE_NAME,
 			});
 
 			expect(result.removed).toEqual([latest.root]);
 			expect(existsSync(latest.root)).toBe(false);
-			expect(toasts).toEqual([
-				"opencode-balancer v0.2.3 is ready. Restart opencode to update from v0.2.2.",
-			]);
 		} finally {
 			rmSync(dir, { force: true, recursive: true });
 		}
@@ -170,7 +165,6 @@ describe("cache update invalidation", () => {
 				"@thelioo/opencode-balancer@latest",
 				"0.2.2",
 			);
-			const toasts: string[] = [];
 
 			const result = await checkAndInvalidateOutdatedPackageCache({
 				cacheDir: dir,
@@ -178,14 +172,12 @@ describe("cache update invalidation", () => {
 				fetchLatestVersion: async () => undefined,
 				moduleUrl: pathToFileURL(join(latest.packageDir, "dist", "index.js"))
 					.href,
-				notify: async (message) => toasts.push(message),
 				packageName: PACKAGE_NAME,
 			});
 
 			expect(result.removed).toEqual([]);
 			expect(result.reason).toBe("latest-version-unavailable");
 			expect(existsSync(latest.root)).toBe(true);
-			expect(toasts).toEqual([]);
 		} finally {
 			rmSync(dir, { force: true, recursive: true });
 		}

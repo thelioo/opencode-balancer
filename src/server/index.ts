@@ -49,12 +49,10 @@ export function createServerHooks({
 	db: Database;
 	client: any;
 }): Hooks {
-	let cacheUpdateChecked = false;
-	const runCacheUpdate = () => {
-		if (cacheUpdateChecked) return;
-		cacheUpdateChecked = true;
-		cacheUpdate?.().catch(() => {});
-	};
+	// opencode caches the `@latest` sandbox and never re-resolves it, so the
+	// bundled version goes stale after a release. Check on load; detecting a
+	// newer release clears the stale sandbox so opencode reinstalls it.
+	cacheUpdate?.().catch(() => {});
 
 	return {
 		"chat.headers": async (input, output) => {
@@ -114,12 +112,6 @@ export function createServerHooks({
 		config: async (cfg) => {
 			configureFallbackCommand(cfg);
 		},
-		event: async ({ event }: any) => {
-			if (event.type !== "session.created") return;
-			if (event.properties?.info?.parentID) return;
-			runCacheUpdate();
-		},
-
 		"experimental.chat.messages.transform": async (_input, output) => {
 			output.messages = output.messages.filter((message) => {
 				return !message.parts.some((part: any) => {
@@ -153,7 +145,6 @@ export const serverPlugin = (async ({ client }) => {
 			checkAndInvalidateOutdatedPackageCache({
 				currentVersion: packageJson.version,
 				moduleUrl: import.meta.url,
-				notify: (message) => showToast(client, message, "success"),
 				packageName: PACKAGE_NAME,
 			}),
 		client,
