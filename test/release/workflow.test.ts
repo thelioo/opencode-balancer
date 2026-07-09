@@ -36,7 +36,7 @@ describe("release workflow", () => {
 		expect(workflow).toContain("id-token: write");
 		expect(workflow).toContain('NODE_AUTH_TOKEN: ""');
 		expect(workflow).toContain("oven-sh/setup-bun@v2");
-		expect(workflow).toContain("npm install --global npm@latest");
+		expect(workflow).toContain("npm install --global npm@10");
 		expect(workflow).toContain("bun install --frozen-lockfile");
 		expect(workflow).toContain("bun run version");
 		expect(workflow).toContain("bun run release");
