@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.10
+
+### Patch Changes
+
+- 3189ae3: Export the compiled TUI entrypoint so current opencode versions can initialize the dashboard plugin.
+
 ## 0.2.9
 
 ### Patch Changes
