@@ -21,7 +21,7 @@
 			"default": "./dist/index.js"
 		},
 		"./tui": {
-			"default": "./dist/tui/tui.tsx"
+			"default": "./dist/tui/tui.js"
 		}
 	},
 	"files": [

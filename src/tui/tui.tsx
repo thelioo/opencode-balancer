@@ -51,19 +51,15 @@ const tui: TuiPlugin = async (api) => {
 		sidebarModule,
 		statusIndicatorModule,
 	] = await Promise.all([
-		import("./components/dashboard" + ".tsx") as Promise<DashboardModule>,
+		import("./components/dashboard.js") as Promise<DashboardModule>,
+		import("./components/priority-screen.js") as Promise<PriorityScreenModule>,
 		import(
-			"./components/priority-screen" + ".tsx"
-		) as Promise<PriorityScreenModule>,
-		import(
-			"./components/provider-model-dialog" + ".tsx"
+			"./components/provider-model-dialog.js"
 		) as Promise<ProviderModelDialogModule>,
+		import("./components/rename-dialog.js") as Promise<RenameDialogModule>,
+		import("./components/sidebar.js") as Promise<SidebarModule>,
 		import(
-			"./components/rename-dialog" + ".tsx"
-		) as Promise<RenameDialogModule>,
-		import("./components/sidebar" + ".tsx") as Promise<SidebarModule>,
-		import(
-			"./components/status-indicator" + ".tsx"
+			"./components/status-indicator.js"
 		) as Promise<StatusIndicatorModule>,
 	]);
 	const state = createBalancerTuiState();

@@ -72,6 +72,9 @@ jobs:
       - name: Build package
         run: bun run build
 
+      - name: Verify built package artifacts
+        run: bun test test/tui/dist-artifact.test.ts
+
       - name: Check npm package
         id: npm_package
         env:
