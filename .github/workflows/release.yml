@@ -29,7 +29,7 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Update npm for trusted publishing
-        run: npm install --global npm@10
+        run: npm install --global npm@latest
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -83,7 +83,7 @@ jobs:
 
       - name: Publish npm
         if: steps.npm_package.outputs.is_published == 'false'
-        run: bun run release
+        run: npm publish --access public
 
       - name: Ensure git tag
         env:
