@@ -4,7 +4,16 @@ import solidTransformPlugin from "@opentui/solid/bun-plugin";
 await rm("dist", { force: true, recursive: true });
 
 const result = await Bun.build({
-	entrypoints: ["./src/index.ts", "./src/tui/tui.tsx"],
+	entrypoints: [
+		"./src/index.ts",
+		"./src/tui/tui.tsx",
+		"./src/tui/components/dashboard.tsx",
+		"./src/tui/components/priority-screen.tsx",
+		"./src/tui/components/provider-model-dialog.tsx",
+		"./src/tui/components/rename-dialog.tsx",
+		"./src/tui/components/sidebar.tsx",
+		"./src/tui/components/status-indicator.tsx",
+	],
 	external: [
 		"./components/*",
 		"@opencode-ai/plugin",
@@ -33,8 +42,6 @@ if (!result.success) {
 	for (const log of result.logs) console.error(log);
 	process.exit(1);
 }
-
-await import("./copy-tui-source");
 
 for (const output of result.outputs) {
 	if (!output.path.endsWith(".map")) continue;

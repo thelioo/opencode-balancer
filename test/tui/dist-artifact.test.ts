@@ -1,6 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+function createApi() {
+	return {
+		keymap: { registerLayer: () => () => {} },
+		lifecycle: {
+			onDispose: () => () => {},
+			signal: new AbortController().signal,
+		},
+		renderer: {},
+		route: {
+			current: { name: "home" },
+			navigate: () => {},
+			register: () => () => {},
+		},
+		slots: { register: () => "test-slot" },
+		state: { provider: [], session: { get: () => undefined } },
+		theme: { current: {} },
+		ui: { dialog: { open: false }, toast: () => {} },
+	} as any;
+}
 
 describe("TUI artifacts", () => {
 	test("disables native model replay for the priority model picker", () => {
@@ -16,19 +37,29 @@ describe("TUI artifacts", () => {
 		expect(priorityRoute).toContain("applyNativeSelection: false");
 	});
 
-	test("uses copied TUI source for the built TUI export", () => {
+	test("uses compiled JavaScript for the built TUI export", () => {
 		const distDir = join(import.meta.dir, "../../dist");
 		if (!existsSync(distDir)) return;
 
-		const artifact = join(import.meta.dir, "../../dist/tui/tui.tsx");
-		const coreDependency = join(import.meta.dir, "../../dist/core/accounts.ts");
-		const serverDependency = join(
+		const artifact = join(import.meta.dir, "../../dist/tui/tui.js");
+		const dashboardArtifact = join(
 			import.meta.dir,
-			"../../dist/server/auth-watcher.ts",
+			"../../dist/tui/components/dashboard.js",
 		);
+		const copiedSource = join(import.meta.dir, "../../dist/tui/tui.tsx");
 		expect(existsSync(artifact)).toBe(true);
-		expect(existsSync(coreDependency)).toBe(true);
-		expect(existsSync(serverDependency)).toBe(true);
+		expect(existsSync(dashboardArtifact)).toBe(true);
+		expect(existsSync(copiedSource)).toBe(false);
+	});
+
+	test("keeps OpenTUI component rendering out of the TUI entry artifact", () => {
+		const artifact = join(import.meta.dir, "../../dist/tui/tui.js");
+		if (!existsSync(artifact)) return;
+
+		const source = readFileSync(artifact, "utf8");
+		expect(source).toContain("runtime-plugin-support");
+		expect(source).not.toContain("createElement as");
+		expect(source).not.toContain("createElement");
 	});
 
 	test("uses OpenCode plugin module shapes for built entries", async () => {
@@ -38,7 +69,7 @@ describe("TUI artifacts", () => {
 		const serverModule = (await import("../../dist/index.js" as string)) as {
 			default: Record<string, unknown>;
 		};
-		const tuiModule = (await import("../../dist/tui/tui.tsx" as string)) as {
+		const tuiModule = (await import("../../dist/tui/tui.js" as string)) as {
 			default: Record<string, unknown>;
 		};
 
@@ -48,6 +79,32 @@ describe("TUI artifacts", () => {
 		expect(typeof tuiModule.default).toBe("object");
 		expect(typeof tuiModule.default.tui).toBe("function");
 		expect("server" in tuiModule.default).toBe(false);
+	});
+
+	test("initializes built TUI from both package entrypoints", async () => {
+		const distDir = join(import.meta.dir, "../../dist");
+		if (!existsSync(distDir)) return;
+
+		const configDir = mkdtempSync(join(tmpdir(), "opencode-balancer-dist-"));
+		const previousConfigDir = Bun.env.OPENCODE_CONFIG_DIR;
+		Bun.env.OPENCODE_CONFIG_DIR = configDir;
+		try {
+			const serverModule = (await import("../../dist/index.js" as string)) as {
+				default: { tui: (api: unknown) => Promise<void> };
+			};
+			const tuiModule = (await import("../../dist/tui/tui.js" as string)) as {
+				default: { tui: (api: unknown) => Promise<void> };
+			};
+
+			await expect(
+				serverModule.default.tui(createApi()),
+			).resolves.toBeUndefined();
+			await expect(tuiModule.default.tui(createApi())).resolves.toBeUndefined();
+		} finally {
+			if (previousConfigDir === undefined) delete Bun.env.OPENCODE_CONFIG_DIR;
+			else Bun.env.OPENCODE_CONFIG_DIR = previousConfigDir;
+			rmSync(configDir, { force: true, recursive: true });
+		}
 	});
 
 	test("strips embedded source content from generated source maps", async () => {

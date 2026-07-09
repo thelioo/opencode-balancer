@@ -47,6 +47,10 @@ describe("release workflow", () => {
 		expect(workflow).toContain("bun run checktypes");
 		expect(workflow).toContain("bun run test");
 		expect(workflow).toContain("bun run build");
+		expect(workflow).toContain("bun test test/tui/dist-artifact.test.ts");
+		expect(workflow.indexOf("bun run build")).toBeLessThan(
+			workflow.indexOf("bun test test/tui/dist-artifact.test.ts"),
+		);
 		expect(workflow).toContain("bun scripts/release/push-release-refs.ts");
 		expect(workflow).toContain("bun scripts/release/create-github-release.ts");
 		expect(workflow).not.toContain("node <<'NODE'");
