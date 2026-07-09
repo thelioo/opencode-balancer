@@ -37,19 +37,27 @@ describe("TUI artifacts", () => {
 		expect(priorityRoute).toContain("applyNativeSelection: false");
 	});
 
-	test("uses compiled JavaScript for the built TUI export", () => {
+	test("compiles the TUI entrypoint but ships components as source", () => {
 		const distDir = join(import.meta.dir, "../../dist");
 		if (!existsSync(distDir)) return;
 
-		const artifact = join(import.meta.dir, "../../dist/tui/tui.js");
-		const dashboardArtifact = join(
+		// The entrypoint is compiled so opencode can initialize the plugin.
+		const entrypoint = join(import.meta.dir, "../../dist/tui/tui.js");
+		expect(existsSync(entrypoint)).toBe(true);
+
+		// Components ship as .tsx source so opencode's runtime plugin transforms
+		// them at load time and they share opencode's @opentui/solid renderer
+		// context. Compiling them breaks that sharing ("No renderer found").
+		const dashboardSource = join(
+			import.meta.dir,
+			"../../dist/tui/components/dashboard.tsx",
+		);
+		const dashboardCompiled = join(
 			import.meta.dir,
 			"../../dist/tui/components/dashboard.js",
 		);
-		const copiedSource = join(import.meta.dir, "../../dist/tui/tui.tsx");
-		expect(existsSync(artifact)).toBe(true);
-		expect(existsSync(dashboardArtifact)).toBe(true);
-		expect(existsSync(copiedSource)).toBe(false);
+		expect(existsSync(dashboardSource)).toBe(true);
+		expect(existsSync(dashboardCompiled)).toBe(false);
 	});
 
 	test("keeps OpenTUI component rendering out of the TUI entry artifact", () => {
