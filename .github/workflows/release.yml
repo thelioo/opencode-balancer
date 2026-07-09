@@ -30,7 +30,7 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Update npm for trusted publishing
-        run: npm install --global npm@latest
+        run: npm install --global npm@10
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
