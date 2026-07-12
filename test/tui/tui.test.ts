@@ -29,6 +29,7 @@ function withTempConfigDir() {
 function createApi() {
 	const routes: TuiRouteDefinition[] = [];
 	const keymapLayers: any[] = [];
+	const legacyCommandCallbacks: any[] = [];
 	const navigations: unknown[] = [];
 	const toasts: unknown[] = [];
 	const dialogs: unknown[] = [];
@@ -40,6 +41,12 @@ function createApi() {
 			app: { version: "test" },
 			attention: {},
 			client: {},
+			command: {
+				register: (cb: any) => {
+					legacyCommandCallbacks.push(cb);
+					return () => {};
+				},
+			},
 			event: {},
 			keymap: {
 				registerLayer: (layer: any) => {
@@ -103,6 +110,7 @@ function createApi() {
 		dialogs,
 		disposes,
 		keymapLayers,
+		legacyCommandCallbacks,
 		navigations,
 		routes,
 		toasts,
@@ -160,6 +168,27 @@ describe("tui plugin", () => {
 		expect(toasts).toEqual([]);
 
 		for (const dispose of disposes) await dispose();
+	});
+
+	test("uses keymap registration even when legacy command api exists", async () => {
+		withTempConfigDir();
+		const { api, keymapLayers, legacyCommandCallbacks } = createApi();
+
+		await plugin.tui(api, undefined, {} as any);
+
+		expect(legacyCommandCallbacks).toEqual([]);
+		expect(keymapLayers).toHaveLength(1);
+		expect(keymapLayers[0].bindings).toContainEqual({
+			cmd: "balancer.dashboard.open",
+			key: "ctrl+b",
+		});
+		expect(keymapLayers[0].commands).toContainEqual(
+			expect.objectContaining({
+				name: "balancer.dashboard.open",
+				slashName: "balancer",
+				title: "Open Balancer Dashboard",
+			}),
+		);
 	});
 
 	test("passes dynamic session provider lookups to reactive sidebar/status handlers", async () => {
