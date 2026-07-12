@@ -1,30 +1,60 @@
-export function selectedRowColors<TColor>(theme: {
-	text: TColor;
-	textMuted?: TColor;
-	backgroundElement: TColor;
+// Mirrors opencode's own selected-list-item styling: a selected row is painted
+// with the theme's `primary` colour and a foreground picked the same way
+// opencode's `selectedForeground` does. Using `backgroundElement` (as this used
+// to) is invisible on themes where the element/background colours are
+// transparent, so the selection highlight would not show at all.
+
+type SelectionTheme<TColor> = {
+	primary: TColor;
 	background?: TColor;
-	accent?: TColor;
-}) {
-	const bg = theme.backgroundElement;
-	const textContrast = contrast(theme.text, bg);
-	const backgroundContrast =
-		theme.background === undefined ? undefined : contrast(theme.background, bg);
-	const fg =
-		backgroundContrast !== undefined && backgroundContrast > textContrast
-			? theme.background
-			: theme.text;
-	return { bg, fg };
+	selectedListItemText?: TColor;
+	_hasSelectedListItemText?: boolean;
+};
+
+export function selectedRowColors<TColor>(theme: SelectionTheme<TColor>): {
+	bg: TColor;
+	fg: TColor | string;
+} {
+	const bg = theme.primary;
+	return { bg, fg: selectedForeground(theme, bg) };
 }
 
-function contrast<TColor>(a: TColor, b: TColor) {
-	const ca = channels(a);
-	const cb = channels(b);
-	if (!ca || !cb) return 0;
-	const la = luminance(ca);
-	const lb = luminance(cb);
-	const lighter = Math.max(la, lb);
-	const darker = Math.min(la, lb);
-	return (lighter + 0.05) / (darker + 0.05);
+function selectedForeground<TColor>(
+	theme: SelectionTheme<TColor>,
+	bg: TColor,
+): TColor | string {
+	// Themes that explicitly define the selected text colour win.
+	if (
+		theme._hasSelectedListItemText &&
+		theme.selectedListItemText !== undefined
+	) {
+		return theme.selectedListItemText;
+	}
+	// On transparent-background themes there is no usable background colour to
+	// read the foreground from, so contrast against the selection background.
+	if (alpha(theme.background) === 0) {
+		const target = channels(bg);
+		if (target) {
+			const relative =
+				(0.299 * target.r + 0.587 * target.g + 0.114 * target.b) / 255;
+			return relative > 0.5 ? "#000000" : "#ffffff";
+		}
+	}
+	return theme.background ?? bg;
+}
+
+function alpha(value: unknown) {
+	if (!value || typeof value !== "object") return undefined;
+	const color = value as {
+		a?: unknown;
+		alpha?: unknown;
+		buffer?: ArrayLike<number>;
+	};
+	if (color.buffer && typeof color.buffer[3] === "number") {
+		return color.buffer[3];
+	}
+	const a = color.a ?? color.alpha;
+	return typeof a === "number" ? a : undefined;
 }
 
 function channels(value: unknown) {
@@ -42,12 +72,4 @@ function numberChannel(value: unknown) {
 	return typeof value === "number" && Number.isFinite(value)
 		? Math.max(0, Math.min(255, value))
 		: undefined;
-}
-
-function luminance(color: { r: number; g: number; b: number }) {
-	const [r, g, b] = [color.r, color.g, color.b].map((channel) => {
-		const value = channel / 255;
-		return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-	});
-	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }

@@ -22,7 +22,7 @@ type ConnectApi = {
 		dispatchCommand?: (command: string) => unknown;
 	};
 	ui?: {
-		dialog?: { open?: boolean };
+		dialog?: { open?: boolean; clear?: () => unknown };
 		toast?: (input: {
 			variant: "success" | "error";
 			message: string;
@@ -86,6 +86,21 @@ async function waitForChangedProvider(
 	}
 }
 
+async function dismissLingeringDialog(api: ConnectApi) {
+	const dialog = api.ui?.dialog;
+	if (!dialog?.clear) return;
+	const wait =
+		api.wait ??
+		((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+	// opencode keeps re-opening the model picker for a short while after a
+	// provider connects, so clear it whenever it appears across a fixed window
+	// rather than stopping the moment it is briefly closed.
+	for (let attempt = 0; attempt < 20; attempt++) {
+		if (dialog.open) dialog.clear();
+		await wait(150);
+	}
+}
+
 export async function openNativeConnect(api: ConnectApi) {
 	if (api.keymap?.dispatchCommand) {
 		const readAuth = api.readAuth ?? readNativeAuth;
@@ -114,6 +129,12 @@ export async function openNativeConnect(api: ConnectApi) {
 							api.generateAlias ?? generatedAlias,
 						);
 					const account = saveAccount(api.db, providerID, alias, auth);
+					// After a provider connects, opencode opens (and keeps
+					// re-opening) its native model picker on top of the dashboard,
+					// which captures the keyboard and leaves the dashboard
+					// unresponsive until the user presses Esc. Dismiss it so control
+					// returns to the dashboard automatically.
+					await dismissLingeringDialog(api);
 					api.ui?.toast?.({
 						message: `Saved ${account.providerID}/${account.alias}.`,
 						variant: "success",

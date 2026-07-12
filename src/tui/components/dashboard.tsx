@@ -86,19 +86,32 @@ export function Dashboard(props: {
 		Math.max(0, Math.min(value, Math.max(0, rows().length - 1)));
 	const clampHeaderCursor = (value: number) =>
 		Math.max(0, Math.min(value, headerActions.length - 1));
+	let accountsSig = "";
+	let usageSig = "";
 	const refreshDashboard = () => {
 		const nextAccounts = listAccounts(props.state.db);
-		setAccounts(nextAccounts);
-		setBalancing(getBalancingEnabled(props.state.db));
-		setUsage(
-			Object.fromEntries(
-				nextAccounts.map((account) => [
-					`${account.providerID}/${account.alias}`,
-					getUsageSnapshot(props.state.db, account.providerID, account.alias),
-				]),
-			),
+		const nextUsage = Object.fromEntries(
+			nextAccounts.map((account) => [
+				`${account.providerID}/${account.alias}`,
+				getUsageSnapshot(props.state.db, account.providerID, account.alias),
+			]),
 		);
-		setCursor((value) => clampCursor(value));
+		const nextAccountsSig = JSON.stringify(nextAccounts);
+		const nextUsageSig = JSON.stringify(nextUsage);
+		// Only push new object/array identities into the signals when the data
+		// actually changed. Re-setting them every tick notifies subscribers and
+		// makes opencode's route re-render (remounting this component and
+		// resetting the selection cursor).
+		if (nextAccountsSig !== accountsSig) {
+			accountsSig = nextAccountsSig;
+			setAccounts(nextAccounts);
+			setCursor((value) => clampCursor(value));
+		}
+		if (nextUsageSig !== usageSig) {
+			usageSig = nextUsageSig;
+			setUsage(nextUsage);
+		}
+		setBalancing(getBalancingEnabled(props.state.db));
 	};
 	refreshDashboard();
 	const timer = setInterval(refreshDashboard, 500);

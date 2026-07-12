@@ -95,6 +95,64 @@ describe("openNativeConnect", () => {
 		rmSync(dir, { force: true, recursive: true });
 	});
 
+	test("dismisses opencode's lingering model picker after saving a new account", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "opencode-balancer-connect-"));
+		const path = join(dir, "balancer.sqlite");
+		const db = openBalancerDatabase(path);
+		migrate(db);
+		const before = {
+			access: "old",
+			expires: 1,
+			refresh: "old",
+			type: "oauth",
+		} satisfies AuthInfo;
+		const after = {
+			access: "new",
+			expires: 2,
+			refresh: "new",
+			type: "oauth",
+		} satisfies AuthInfo;
+		let reads = 0;
+		let open = true;
+		let clears = 0;
+		let reopens = 1;
+		const dialog = {
+			clear: () => {
+				clears += 1;
+				open = false;
+			},
+			get open() {
+				return open;
+			},
+		};
+
+		await openNativeConnect({
+			db,
+			generateAlias: () => "a1b2c",
+			keymap: { dispatchCommand: async () => undefined },
+			readAuth: () => ({
+				auth: { openai: reads++ === 0 ? before : after },
+				ok: true,
+			}),
+			ui: { dialog, toast: () => {} },
+			// opencode reopens the model picker once right after it is cleared.
+			wait: async () => {
+				if (clears >= 1 && reopens > 0) {
+					open = true;
+					reopens -= 1;
+				}
+			},
+		});
+
+		expect(open).toBe(false);
+		expect(clears).toBeGreaterThanOrEqual(2);
+		expect(listAccounts(db, "openai")).toMatchObject([
+			{ alias: "a1b2c", providerID: "openai" },
+		]);
+		closeBalancerDatabase(path);
+		rmSync(dir, { force: true, recursive: true });
+	});
+
 	test("waits for native auth to change after the provider dialog finishes later", async () => {
 		const dir = mkdtempSync(join(tmpdir(), "opencode-balancer-connect-"));
 		const path = join(dir, "balancer.sqlite");
