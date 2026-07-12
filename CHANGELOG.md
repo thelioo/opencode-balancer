@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.13
+
+### Patch Changes
+
+- 3d90b41: Register the Balancer dashboard command through OpenCode's current TUI keymap API so `/balancer`, `Ctrl+B`, and the command palette work on OpenCode 1.17.18.
+
 ## 0.2.12
 
 ### Patch Changes
