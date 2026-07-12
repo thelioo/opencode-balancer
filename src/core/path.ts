@@ -3,15 +3,29 @@ function joinPath(...parts: string[]) {
 }
 
 function homeDir() {
-	return Bun.env.HOME || "/";
+	return (
+		Bun.env.HOME ||
+		Bun.env.USERPROFILE ||
+		(Bun.env.HOMEDRIVE && Bun.env.HOMEPATH
+			? `${Bun.env.HOMEDRIVE}${Bun.env.HOMEPATH}`
+			: "/")
+	);
 }
 
 function xdgConfigHome() {
-	return Bun.env.XDG_CONFIG_HOME || joinPath(homeDir(), ".config");
+	return (
+		Bun.env.XDG_CONFIG_HOME ||
+		Bun.env.LOCALAPPDATA ||
+		joinPath(homeDir(), ".config")
+	);
 }
 
 function xdgDataHome() {
-	return Bun.env.XDG_DATA_HOME || joinPath(homeDir(), ".local", "share");
+	return (
+		Bun.env.XDG_DATA_HOME ||
+		Bun.env.LOCALAPPDATA ||
+		joinPath(homeDir(), ".local", "share")
+	);
 }
 
 export function configDir() {

@@ -2,32 +2,59 @@ import { describe, expect, test } from "bun:test";
 import { selectedRowColors } from "../../src/tui/selection-colors";
 
 describe("selectedRowColors", () => {
-	test("uses UI background colors instead of accent as the selected row background", () => {
+	test("paints the selected row with the theme primary color", () => {
 		const theme = {
-			accent: "accent",
+			_hasSelectedListItemText: true,
 			background: "background",
-			backgroundElement: "backgroundElement",
-			text: "text",
+			primary: "primary",
+			selectedListItemText: "selected-text",
 		};
 
 		expect(selectedRowColors(theme)).toEqual({
-			bg: "backgroundElement",
-			fg: "text",
+			bg: "primary",
+			fg: "selected-text",
 		});
 	});
 
-	test("chooses the foreground with stronger contrast for RGB colors", () => {
+	test("falls back to the background foreground on opaque themes without selected text", () => {
 		const theme = {
-			accent: { a: 255, b: 230, g: 255, r: 255 },
-			background: { a: 255, b: 30, g: 0, r: 48 },
-			backgroundElement: { a: 255, b: 55, g: 23, r: 82 },
-			text: { a: 255, b: 245, g: 245, r: 245 },
-			textMuted: { a: 255, b: 150, g: 150, r: 150 },
+			_hasSelectedListItemText: false,
+			background: "background",
+			primary: "primary",
+			selectedListItemText: "background",
 		};
 
 		expect(selectedRowColors(theme)).toEqual({
-			bg: theme.backgroundElement,
-			fg: theme.text,
+			bg: "primary",
+			fg: "background",
+		});
+	});
+
+	test("contrasts against a light primary on transparent-background themes", () => {
+		const theme = {
+			_hasSelectedListItemText: false,
+			background: { a: 0, b: 0, g: 0, r: 0 },
+			primary: { a: 255, b: 43, g: 91, r: 236 },
+			selectedListItemText: { a: 0, b: 0, g: 0, r: 0 },
+		};
+
+		expect(selectedRowColors(theme)).toEqual({
+			bg: theme.primary,
+			fg: "#000000",
+		});
+	});
+
+	test("contrasts against a dark primary on transparent-background themes", () => {
+		const theme = {
+			_hasSelectedListItemText: false,
+			background: { a: 0, b: 0, g: 0, r: 0 },
+			primary: { a: 255, b: 20, g: 20, r: 20 },
+			selectedListItemText: { a: 0, b: 0, g: 0, r: 0 },
+		};
+
+		expect(selectedRowColors(theme)).toEqual({
+			bg: theme.primary,
+			fg: "#ffffff",
 		});
 	});
 });

@@ -169,22 +169,39 @@ const tui: TuiPlugin = async (api) => {
 	]);
 	api.lifecycle.onDispose(unregisterDashboard);
 
-	const unregisterKeymap = api.keymap.registerLayer({
-		bindings: [{ cmd: "balancer.dashboard.open", key: "ctrl+b" }],
-		commands: [
+	if (api.command) {
+		const unregisterCommand = api.command.register(() => [
 			{
 				category: "Plugin",
-				name: "balancer.dashboard.open",
-				namespace: "palette",
-				run() {
+				description: "Open the Balancer dashboard.",
+				keybind: "ctrl+b",
+				onSelect() {
 					openDashboard();
 				},
-				slashName: "balancer",
+				slash: { name: "balancer" },
 				title: "Open Balancer Dashboard",
+				value: "balancer.dashboard.open",
 			},
-		],
-	});
-	api.lifecycle.onDispose(unregisterKeymap);
+		]);
+		api.lifecycle.onDispose(unregisterCommand);
+	} else {
+		const unregisterKeymap = api.keymap.registerLayer({
+			bindings: [{ cmd: "balancer.dashboard.open", key: "ctrl+b" }],
+			commands: [
+				{
+					category: "Plugin",
+					name: "balancer.dashboard.open",
+					namespace: "palette",
+					run() {
+						openDashboard();
+					},
+					slashName: "balancer",
+					title: "Open Balancer Dashboard",
+				},
+			],
+		});
+		api.lifecycle.onDispose(unregisterKeymap);
+	}
 
 	api.slots.register({
 		slots: {
