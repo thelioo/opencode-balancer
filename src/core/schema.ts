@@ -411,6 +411,70 @@ function recreateSettings(db: Database) {
     `);
 }
 
+const requiredColumns: Record<string, string[]> = {
+	accounts: [
+		"provider_id",
+		"alias",
+		"auth_json",
+		"auth_type",
+		"created_at",
+		"updated_at",
+		"last_used_at",
+		"rate_limited_until",
+		"failures",
+		"disabled",
+	],
+	events: [
+		"id",
+		"type",
+		"provider_id",
+		"alias",
+		"message",
+		"created_at",
+		"metadata_json",
+	],
+	pending_connections: [
+		"id",
+		"provider_id",
+		"auth_json",
+		"auth_type",
+		"source",
+		"captured_at",
+		"prompt_status",
+	],
+	provider_priority: [
+		"provider_id",
+		"position",
+		"model_id",
+		"enabled",
+		"updated_at",
+	],
+	provider_state: [
+		"provider_id",
+		"active_alias",
+		"updated_at",
+		"metadata_json",
+	],
+	settings: ["key", "value"],
+	usage_snapshots: [
+		"provider_id",
+		"alias",
+		"fetched_at",
+		"confidence",
+		"normalized_json",
+		"raw_redacted_json",
+		"error",
+	],
+};
+
+function schemaIsCurrent(db: Database) {
+	for (const [table, columns] of Object.entries(requiredColumns)) {
+		const existing = tableColumns(db, table);
+		if (columns.some((column) => !existing.has(column))) return false;
+	}
+	return true;
+}
+
 export function migrate(db: Database) {
 	db.exec(`
         CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -418,6 +482,11 @@ export function migrate(db: Database) {
             applied_at INTEGER NOT NULL
         );
     `);
+
+	// Server and TUI plugin instances migrate the same database concurrently on
+	// every opencode start; recreating tables when nothing changed turns that
+	// into a lock/drop race ("database is locked", "no such table: accounts_new").
+	if (hasMigration(db, 1) && schemaIsCurrent(db)) return;
 
 	const apply = db.transaction(() => {
 		recreateAccounts(db);

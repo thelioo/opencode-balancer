@@ -68,6 +68,23 @@ describe("schema migrations", () => {
 		expect(row?.count).toBe(1);
 	});
 
+	test("skips table recreation when the schema is already current", () => {
+		const db = openBalancerDatabase(tempDb());
+		migrate(db);
+
+		// Recreation starts with DROP TABLE IF EXISTS accounts_new, so a
+		// sentinel table only survives a second migrate() if it short-circuits.
+		db.exec("CREATE TABLE accounts_new (sentinel INTEGER)");
+		migrate(db);
+
+		const sentinel = db
+			.query<{ name: string }, []>(
+				"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'accounts_new'",
+			)
+			.get();
+		expect(sentinel?.name).toBe("accounts_new");
+	});
+
 	test("repairs incomplete existing version one databases", () => {
 		const db = openBalancerDatabase(tempDb());
 		db.exec(`
