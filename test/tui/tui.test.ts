@@ -26,7 +26,7 @@ function withTempConfigDir() {
 	Bun.env.OPENCODE_CONFIG_DIR = dir;
 }
 
-function createApi() {
+function createApi(options: { command?: boolean } = {}) {
 	const routes: TuiRouteDefinition[] = [];
 	const keymapLayers: any[] = [];
 	const legacyCommandCallbacks: any[] = [];
@@ -36,7 +36,7 @@ function createApi() {
 	const dialogSizes: string[] = [];
 	const disposes: Array<() => void | Promise<void>> = [];
 
-	return {
+	const api = {
 		api: {
 			app: { version: "test" },
 			attention: {},
@@ -115,6 +115,10 @@ function createApi() {
 		routes,
 		toasts,
 	};
+
+	if (options.command === false) delete api.api.command;
+
+	return api;
 }
 
 describe("tui plugin", () => {
@@ -124,6 +128,7 @@ describe("tui plugin", () => {
 			api,
 			routes,
 			keymapLayers,
+			legacyCommandCallbacks,
 			navigations,
 			dialogs,
 			dialogSizes,
@@ -137,28 +142,29 @@ describe("tui plugin", () => {
 			"balancer.dashboard",
 			"balancer.priority",
 		]);
-		const commands = keymapLayers.flatMap((layer) => layer.commands ?? []);
-		const bindings = keymapLayers.flatMap((layer) => layer.bindings ?? []);
+		expect(keymapLayers).toEqual([]);
+		expect(legacyCommandCallbacks).toHaveLength(1);
+		const commands = legacyCommandCallbacks[0]();
 		const open = commands.find(
-			(command) => command.name === "balancer.dashboard.open",
+			(command: { value?: string }) =>
+				command.value === "balancer.dashboard.open",
 		);
 		const refresh = commands.find(
-			(command) => command.name === "balancer.usage.refresh",
+			(command: { value?: string }) =>
+				command.value === "balancer.usage.refresh",
 		);
 
 		expect(open).toMatchObject({
 			category: "Plugin",
-			namespace: "palette",
-			slashName: "balancer",
+			description: "Open the Balancer dashboard.",
+			keybind: "ctrl+b",
+			slash: { name: "balancer" },
 			title: "Open Balancer Dashboard",
+			value: "balancer.dashboard.open",
 		});
 		expect(refresh).toBeUndefined();
-		expect(bindings).toContainEqual({
-			cmd: "balancer.dashboard.open",
-			key: "ctrl+b",
-		});
 
-		open.run();
+		open.onSelect();
 
 		expect(dialogSizes).toEqual([]);
 		expect(dialogs).toEqual([]);
@@ -170,9 +176,11 @@ describe("tui plugin", () => {
 		for (const dispose of disposes) await dispose();
 	});
 
-	test("uses keymap registration even when legacy command api exists", async () => {
+	test("falls back to keymap registration when command api is unavailable", async () => {
 		withTempConfigDir();
-		const { api, keymapLayers, legacyCommandCallbacks } = createApi();
+		const { api, keymapLayers, legacyCommandCallbacks } = createApi({
+			command: false,
+		});
 
 		await plugin.tui(api, undefined, {} as any);
 
