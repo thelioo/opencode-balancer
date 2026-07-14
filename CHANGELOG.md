@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.15
+
+### Patch Changes
+
+- 766f207: Skip schema table recreation when the migration is already applied, fixing "database is locked" and "no such table: accounts_new" races between concurrent server and TUI plugin instances.
+
 ## 0.2.14
 
 ### Patch Changes
