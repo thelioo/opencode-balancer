@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.14
+
+### Patch Changes
+
+- 0e4aabd: Restore Balancer TUI command registration for opencode builds that use the command API.
+
 ## 0.2.13
 
 ### Patch Changes
