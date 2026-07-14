@@ -5,6 +5,7 @@ import {
 	createMemo,
 	createSignal,
 	For,
+	type JSX,
 	onCleanup,
 	onMount,
 	Show,
@@ -181,7 +182,7 @@ export function PriorityScreen(props: {
 
 	const Row = (rowProps: {
 		selected?: boolean;
-		children: unknown;
+		children: JSX.Element;
 		onMouseUp?: () => void;
 	}) => (
 		<box
