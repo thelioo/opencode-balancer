@@ -5,6 +5,7 @@ import {
 	createMemo,
 	createSignal,
 	For,
+	type JSX,
 	onCleanup,
 	onMount,
 	Show,
@@ -160,7 +161,7 @@ export function Dashboard(props: {
 	const Row = (rowProps: {
 		selected?: boolean;
 		onMouseUp?: () => void;
-		children: unknown;
+		children: JSX.Element;
 	}) => (
 		<box
 			backgroundColor={rowProps.selected ? selectedColors().bg : undefined}
