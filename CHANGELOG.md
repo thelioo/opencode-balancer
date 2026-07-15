@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.17
+
+### Patch Changes
+
+- 293877b: Fix arrow-key navigation in the dashboard and priority screens when the plugin is installed from npm. opencode's route computation could track the screens' selection signals through opentui's runtime bridge, remounting the screen on every key press and resetting the selection; the selection state now lives at module scope so it survives those remounts.
+
 ## 0.2.16
 
 ### Patch Changes
