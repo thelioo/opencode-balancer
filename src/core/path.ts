@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+
 function joinPath(...parts: string[]) {
 	return parts.filter(Boolean).join("/").replace(/\/+/g, "/");
 }
@@ -12,20 +14,16 @@ function homeDir() {
 	);
 }
 
+// opencode resolves its directories with the xdg-basedir package, which
+// applies the XDG defaults on every platform — including Windows, where it
+// never consults LOCALAPPDATA. Mirror that so we read the same auth.json
+// opencode writes.
 function xdgConfigHome() {
-	return (
-		Bun.env.XDG_CONFIG_HOME ||
-		Bun.env.LOCALAPPDATA ||
-		joinPath(homeDir(), ".config")
-	);
+	return Bun.env.XDG_CONFIG_HOME || joinPath(homeDir(), ".config");
 }
 
 function xdgDataHome() {
-	return (
-		Bun.env.XDG_DATA_HOME ||
-		Bun.env.LOCALAPPDATA ||
-		joinPath(homeDir(), ".local", "share")
-	);
+	return Bun.env.XDG_DATA_HOME || joinPath(homeDir(), ".local", "share");
 }
 
 export function configDir() {
@@ -40,7 +38,19 @@ export function dataDir() {
 }
 
 export function storePath() {
-	return joinPath(configDir(), "balancer.sqlite");
+	const path = joinPath(configDir(), "balancer.sqlite");
+	if (existsSync(path)) return path;
+	// Older releases resolved the config dir to LOCALAPPDATA on Windows.
+	// Keep using a store created there so existing accounts are not lost.
+	const legacyRoot =
+		!Bun.env.OPENCODE_CONFIG_DIR &&
+		!Bun.env.XDG_CONFIG_HOME &&
+		Bun.env.LOCALAPPDATA;
+	if (legacyRoot) {
+		const legacy = joinPath(legacyRoot, "opencode", "balancer.sqlite");
+		if (existsSync(legacy)) return legacy;
+	}
+	return path;
 }
 
 export function nativeAuthPath() {
