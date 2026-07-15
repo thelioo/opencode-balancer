@@ -40,6 +40,11 @@ function modelLabel(api: TuiPluginApi, entry: PriorityEntry): string {
 	return model?.name ?? entry.modelID;
 }
 
+// Module scope so the selection survives host-driven route remounts; see the
+// note above the Dashboard selection signals.
+const [cursor, setCursor] = createSignal(0);
+const [focusArea, setFocusArea] = createSignal<PriorityFocusArea>("content");
+
 export function PriorityScreen(props: {
 	api: TuiPluginApi;
 	state: BalancerTuiState;
@@ -54,8 +59,6 @@ export function PriorityScreen(props: {
 		listProviderPriority(db),
 	);
 	const [balancing, setBalancing] = createSignal(getBalancingEnabled(db));
-	const [cursor, setCursor] = createSignal(0);
-	const [focusArea, setFocusArea] = createSignal<PriorityFocusArea>("content");
 	const compact = () =>
 		dashboardLayoutMode({
 			height: (props.api.renderer as unknown as { height?: number }).height,

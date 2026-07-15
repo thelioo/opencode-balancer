@@ -35,6 +35,16 @@ type DashboardRow =
 
 type HeaderAction = { type: "close" | "priority"; key: string; label: string };
 
+// Selection state lives at module scope on purpose: when the plugin is
+// installed from npm, opentui's runtime bridge can make opencode's reactive
+// route computation track signals read while this component mounts, so every
+// key press re-renders the route and remounts the component. Module-scoped
+// signals survive those remounts, keeping arrow navigation working.
+const [confirmAccount, setConfirmAccount] = createSignal<string | undefined>();
+const [cursor, setCursor] = createSignal(0);
+const [headerCursor, setHeaderCursor] = createSignal(0);
+const [focusArea, setFocusArea] = createSignal<DashboardFocusArea>("content");
+
 export function Dashboard(props: {
 	api: TuiPluginApi;
 	state: BalancerTuiState;
@@ -46,9 +56,6 @@ export function Dashboard(props: {
 }) {
 	const theme = () => props.api.theme.current;
 	const selectedColors = () => selectedRowColors(theme());
-	const [confirmAccount, setConfirmAccount] = createSignal<
-		string | undefined
-	>();
 	const [accounts, setAccounts] = createSignal(listAccounts(props.state.db));
 	const [balancing, setBalancing] = createSignal(
 		getBalancingEnabled(props.state.db),
@@ -56,9 +63,6 @@ export function Dashboard(props: {
 	const [usage, setUsage] = createSignal<
 		Record<string, ProviderUsageSnapshot | undefined>
 	>({});
-	const [cursor, setCursor] = createSignal(0);
-	const [headerCursor, setHeaderCursor] = createSignal(0);
-	const [focusArea, setFocusArea] = createSignal<DashboardFocusArea>("content");
 	const layoutMode = () =>
 		dashboardLayoutMode({
 			height: (props.api.renderer as unknown as { height?: number }).height,
