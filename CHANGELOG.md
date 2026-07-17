@@ -1,5 +1,11 @@
 # @thelioo/opencode-balancer
 
+## 0.2.18
+
+### Patch Changes
+
+- 3535f76: Read auth.json from the same directory opencode writes it on Windows (`~/.local/share/opencode`, matching xdg-basedir) instead of `%LOCALAPPDATA%`, so accounts connected through the native provider flow are saved.
+
 ## 0.2.17
 
 ### Patch Changes
