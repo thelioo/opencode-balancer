@@ -10,7 +10,6 @@ Important rules
 - Do not run npm install, bun install, or other package install commands for this plugin during user setup. opencode installs npm plugins automatically with Bun at startup.
 - Preserve existing opencode config, TUI config, plugins, comments, formatting, providers, agents, MCP servers, and permissions whenever possible.
 - Use the singular key "plugin", not "plugins".
-- Add the plugin only if it is not already present.
 - Prefer @thelioo/opencode-balancer (without @latest) for user installs.
 - Keep config changes minimal and do not remove unrelated user settings.
 
