@@ -6,7 +6,27 @@ import type { Account } from "../core/types";
 export const INTERNAL_REQUEST_HEADER = "x-opencode-balancer-request";
 export const BALANCER_METADATA_KEY = "opencodeBalancerCommand";
 
-export const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504, 529]);
+export const RETRYABLE_STATUS = new Set([
+	402, 403, 429, 500, 502, 503, 504, 529,
+]);
+
+// Some providers (notably opencode's own Zen free tier) signal quota/credit
+// exhaustion with a status code that isn't in RETRYABLE_STATUS (e.g. plain
+// 402/403, or sometimes even 200) and only distinguish it in the body text.
+// These patterns let the fetch patch fall back to sniffing the body when the
+// status code alone doesn't tell us the account is exhausted.
+export const QUOTA_EXCEEDED_PATTERNS = [
+	/free usage exceeded/i,
+	/subscribe to go/i,
+	/add credits/i,
+	/insufficient_quota/i,
+	/exceeded your current quota/i,
+	/usage limit/i,
+];
+
+export function bodyLooksQuotaExceeded(text: string) {
+	return QUOTA_EXCEEDED_PATTERNS.some((pattern) => pattern.test(text));
+}
 
 type PendingRequest = {
 	providerID: string;

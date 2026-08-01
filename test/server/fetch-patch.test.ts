@@ -213,4 +213,74 @@ describe("server fetch patch", () => {
 		expect(getAccount(database, "openai", "main")?.failures).toBe(1);
 		expect(getAccount(database, "openai", "backup")?.failures).toBe(0);
 	});
+
+	test("fails over on a quota-exceeded body even when the status code is not in RETRYABLE_STATUS", async () => {
+		const database = db();
+		const main = saveAccount(database, "openai", "main", {
+			key: "sk-main",
+			type: "api",
+		});
+		saveAccount(database, "openai", "backup", {
+			key: "sk-backup",
+			type: "api",
+		});
+		setBalancingEnabled(database, true);
+		setPendingRequest("request-1", { account: main, providerID: "openai" });
+
+		const attemptedKeys: string[] = [];
+		globalThis.fetch = (async (
+			_input: RequestInfo | URL,
+			init?: RequestInit,
+		) => {
+			const headers = new Headers(init?.headers);
+			attemptedKeys.push(
+				headers.get("authorization")?.replace(/^Bearer /, "") ?? "",
+			);
+			// 402 is not in the legacy RETRYABLE_STATUS set on its own; only the
+			// body text signals that this account's usage/quota is exhausted.
+			return new Response(
+				JSON.stringify({ error: "Free usage exceeded, subscribe to Go" }),
+				{ headers: { "content-type": "application/json" }, status: 402 },
+			);
+		}) as typeof fetch;
+		installFetchPatch(database, {});
+
+		const response = await fetch("https://api.example.test/v1/chat", {
+			headers: { [INTERNAL_REQUEST_HEADER]: "request-1" },
+		});
+
+		expect(response.status).toBe(402);
+		expect(attemptedKeys).toEqual(["sk-main", "sk-backup"]);
+		expect(getAccount(database, "openai", "main")?.failures).toBe(1);
+		// The mock returns the quota-exceeded response for every account, so the
+		// backup gets attempted (proving failover happened) and then marked too.
+		expect(getAccount(database, "openai", "backup")?.failures).toBe(1);
+	});
+
+	test("does not fail over on an ordinary successful response", async () => {
+		const database = db();
+		const main = saveAccount(database, "openai", "main", {
+			key: "sk-main",
+			type: "api",
+		});
+		setPendingRequest("request-1", { account: main, providerID: "openai" });
+
+		globalThis.fetch = (async (
+			_input: RequestInfo | URL,
+			_init?: RequestInit,
+		) => {
+			return new Response(JSON.stringify({ ok: true }), {
+				headers: { "content-type": "application/json" },
+				status: 200,
+			});
+		}) as typeof fetch;
+		installFetchPatch(database, {});
+
+		const response = await fetch("https://api.example.test/v1/chat", {
+			headers: { [INTERNAL_REQUEST_HEADER]: "request-1" },
+		});
+
+		expect(response.status).toBe(200);
+		expect(getAccount(database, "openai", "main")?.failures).toBe(0);
+	});
 });
