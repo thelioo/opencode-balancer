@@ -1,6 +1,6 @@
 {
 	"bugs": {
-		"url": "https://github.com/thelioo/opencode-balancer/issues"
+		"url": "https://github.com/secondstrikerss/opencode-balancer/issues"
 	},
 	"dependencies": {
 		"@opencode-ai/plugin": "^1.14.51",
@@ -30,7 +30,7 @@
 		"INSTALL.txt",
 		"LICENSE"
 	],
-	"homepage": "https://github.com/thelioo/opencode-balancer#readme",
+	"homepage": "https://github.com/secondstrikerss/opencode-balancer#readme",
 	"keywords": [
 		"opencode",
 		"opencode-plugin",
@@ -39,10 +39,10 @@
 	],
 	"license": "MIT",
 	"main": "./dist/index.js",
-	"name": "@thelioo/opencode-balancer",
+	"name": "@secondstrikerss/opencode-balancer",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/thelioo/opencode-balancer.git"
+		"url": "git+https://github.com/secondstrikerss/opencode-balancer.git"
 	},
 	"scripts": {
 		"build": "bun scripts/build.ts",

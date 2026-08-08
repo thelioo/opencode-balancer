@@ -10,6 +10,7 @@ import {
 } from "../../core/priority";
 import type { Account } from "../../core/types";
 import { getUsageSnapshot } from "../../core/usage/store";
+import { safePoll } from "../safe-poll";
 import type { BalancerTuiState } from "../state";
 import { formatBalancerStatus } from "../status-format";
 import { formatUsageBar } from "../usage-format";
@@ -60,7 +61,7 @@ export function BalancerStatusIndicator(props: BalancerStatusIndicatorProps) {
 		);
 	};
 	refresh();
-	const timer = setInterval(refresh, 500);
+	const timer = setInterval(() => safePoll(refresh), 2000);
 	onCleanup(() => clearInterval(timer));
 
 	const status = () => {

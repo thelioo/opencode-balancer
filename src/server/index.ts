@@ -26,7 +26,7 @@ import {
 	setPendingRequest,
 } from "./request-balancer";
 
-const PACKAGE_NAME = "@thelioo/opencode-balancer";
+const PACKAGE_NAME = "@secondstrikerss/opencode-balancer";
 
 export function configureFallbackCommand(cfg: Config) {
 	if (!cfg.command?.balancer) return;

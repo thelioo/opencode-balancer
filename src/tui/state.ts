@@ -7,6 +7,7 @@ import { storePath } from "../core/path";
 import { listPendingConnections } from "../core/pending";
 import { migrate } from "../core/schema";
 import type { Account, BalancerEvent, PendingConnection } from "../core/types";
+import { safePoll } from "./safe-poll";
 
 export type BalancerTuiState = {
 	db: Database;
@@ -65,7 +66,7 @@ export function createBalancerTuiState(): BalancerTuiState {
 
 	refresh();
 
-	interval = setInterval(refresh, 1000);
+	interval = setInterval(() => safePoll(refresh), 2000);
 	onCleanup(dispose);
 
 	return {

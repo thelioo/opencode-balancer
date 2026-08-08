@@ -7,6 +7,7 @@ import { getBalancingEnabled } from "../../core/priority";
 import type { Account } from "../../core/types";
 import { getUsageSnapshot } from "../../core/usage/store";
 import type { ProviderUsageSnapshot } from "../../core/usage/types";
+import { safePoll } from "../safe-poll";
 import type { BalancerTuiState } from "../state";
 import { UsageSnapshotBar } from "./usage-display";
 
@@ -42,7 +43,7 @@ export function BalancerSidebar(props: BalancerSidebarProps) {
 		);
 	};
 	refreshSidebar();
-	const timer = setInterval(refreshSidebar, 500);
+	const timer = setInterval(() => safePoll(refreshSidebar), 2000);
 	onCleanup(() => clearInterval(timer));
 	const Button = (buttonProps: { label: string; onClick: () => void }) => (
 		<box onMouseUp={buttonProps.onClick} paddingLeft={0} paddingRight={0}>

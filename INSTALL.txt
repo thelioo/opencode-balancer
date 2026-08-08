@@ -1,7 +1,7 @@
 opencode-balancer installation guide for AI agents
 
 Goal
-Install @thelioo/opencode-balancer as both an opencode server plugin and an opencode TUI plugin without removing or rewriting the user's existing opencode configuration.
+Install @secondstrikerss/opencode-balancer as both an opencode server plugin and an opencode TUI plugin without removing or rewriting the user's existing opencode configuration.
 
 What this plugin does
 opencode-balancer lets opencode users save multiple authenticated accounts per provider, manage them from a TUI dashboard, choose provider/model priority, and automatically retry with another healthy account when the active account is rate-limited.
@@ -10,7 +10,8 @@ Important rules
 - Do not run npm install, bun install, or other package install commands for this plugin during user setup. opencode installs npm plugins automatically with Bun at startup.
 - Preserve existing opencode config, TUI config, plugins, comments, formatting, providers, agents, MCP servers, and permissions whenever possible.
 - Use the singular key "plugin", not "plugins".
-- Prefer @thelioo/opencode-balancer (without @latest) for user installs.
+- Add the plugin only if it is not already present.
+- Prefer @secondstrikerss/opencode-balancer (without @latest) for user installs.
 - Keep config changes minimal and do not remove unrelated user settings.
 
 Steps
@@ -26,7 +27,7 @@ Steps
    - If the config is JSON, keep JSON syntax valid.
 
 3. Add this plugin entry to the opencode config plugin array:
-   @thelioo/opencode-balancer
+   @secondstrikerss/opencode-balancer
 
 4. Locate the user's opencode TUI config.
    - Prefer ~/.config/opencode/tui.jsonc if it exists.
@@ -40,7 +41,7 @@ Steps
    - If the config is JSON, keep JSON syntax valid.
 
 6. Add this plugin entry to the TUI config plugin array:
-   @thelioo/opencode-balancer
+   @secondstrikerss/opencode-balancer
 
 7. Save both configs.
 
@@ -51,13 +52,13 @@ Steps
 Expected config shape
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@thelioo/opencode-balancer"]
+  "plugin": ["@secondstrikerss/opencode-balancer"]
 }
 
 Expected TUI config shape
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["@thelioo/opencode-balancer"]
+  "plugin": ["@secondstrikerss/opencode-balancer"]
 }
 
 After restart
@@ -86,8 +87,8 @@ TUI-only workflow
 /balancer opens the Balancer dashboard in the TUI. Account management, provider/model priority, supported usage snapshots, and balancing settings are handled from the TUI only.
 
 Verification
-- Confirm the opencode config contains @thelioo/opencode-balancer in the plugin array.
-- Confirm the opencode TUI config contains @thelioo/opencode-balancer in the plugin array.
+- Confirm the opencode config contains @secondstrikerss/opencode-balancer in the plugin array.
+- Confirm the opencode TUI config contains @secondstrikerss/opencode-balancer in the plugin array.
 - Confirm no existing plugin entries were removed.
 - Confirm the user restarted opencode after the config change.
 - Confirm the Balancer dashboard opens with Ctrl+B, /balancer, or the command palette.

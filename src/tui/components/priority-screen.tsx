@@ -26,6 +26,7 @@ import {
 	reducePriorityKey,
 } from "../priority-keys";
 import { dashboardLayoutMode } from "../responsive";
+import { safePoll } from "../safe-poll";
 import { selectedRowColors } from "../selection-colors";
 import type { BalancerTuiState } from "../state";
 
@@ -74,7 +75,7 @@ export function PriorityScreen(props: {
 		);
 	};
 	refresh();
-	const timer = setInterval(refresh, 500);
+	const timer = setInterval(() => safePoll(refresh), 1500);
 	onCleanup(() => clearInterval(timer));
 
 	const activeProviderID = createMemo(() =>

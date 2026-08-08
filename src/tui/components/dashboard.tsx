@@ -12,7 +12,12 @@ import {
 } from "solid-js";
 import packageJson from "../../../package.json" with { type: "json" };
 import { listAccounts } from "../../core/accounts";
-import { getBalancingEnabled, setBalancingEnabled } from "../../core/priority";
+import {
+	getBalancingEnabled,
+	getQuotaAwareSelectionEnabled,
+	setBalancingEnabled,
+	setQuotaAwareSelectionEnabled,
+} from "../../core/priority";
 import { getUsageSnapshot } from "../../core/usage/store";
 import type { ProviderUsageSnapshot } from "../../core/usage/types";
 import {
@@ -22,6 +27,7 @@ import {
 	reduceDashboardKey,
 } from "../dashboard-keys";
 import { dashboardContentHeight, dashboardLayoutMode } from "../responsive";
+import { safePoll } from "../safe-poll";
 import { selectedRowColors } from "../selection-colors";
 import type { BalancerTuiState } from "../state";
 import { UsageSnapshotBar } from "./usage-display";
@@ -30,6 +36,7 @@ type KeyLike = { name?: string };
 
 type DashboardRow =
 	| { type: "balancing"; key: string }
+	| { type: "quotaAware"; key: string }
 	| { type: "connect"; key: string }
 	| { type: "account"; key: string; providerID: string; alias: string };
 
@@ -60,6 +67,9 @@ export function Dashboard(props: {
 	const [balancing, setBalancing] = createSignal(
 		getBalancingEnabled(props.state.db),
 	);
+	const [quotaAware, setQuotaAware] = createSignal(
+		getQuotaAwareSelectionEnabled(props.state.db),
+	);
 	const [usage, setUsage] = createSignal<
 		Record<string, ProviderUsageSnapshot | undefined>
 	>({});
@@ -79,6 +89,7 @@ export function Dashboard(props: {
 	];
 	const rows = createMemo<DashboardRow[]>(() => [
 		{ key: "balancing", type: "balancing" },
+		{ key: "quotaAware", type: "quotaAware" },
 		{ key: "connect", type: "connect" },
 		...accounts().map((account) => ({
 			alias: account.alias,
@@ -117,9 +128,10 @@ export function Dashboard(props: {
 			setUsage(nextUsage);
 		}
 		setBalancing(getBalancingEnabled(props.state.db));
+		setQuotaAware(getQuotaAwareSelectionEnabled(props.state.db));
 	};
 	refreshDashboard();
-	const timer = setInterval(refreshDashboard, 500);
+	const timer = setInterval(() => safePoll(refreshDashboard), 1500);
 	onCleanup(() => clearInterval(timer));
 	const Button = (buttonProps: {
 		label: string;
@@ -203,6 +215,7 @@ export function Dashboard(props: {
 		if (focusArea() === "header") return currentHeader()?.type ?? "header";
 		if (!row) return "none";
 		if (row.type === "balancing") return "balancing";
+		if (row.type === "quotaAware") return "quotaAware";
 		if (row.type === "connect") return "connect";
 		if (row.type === "account") return `account/${row.providerID}/${row.alias}`;
 		return "priority";
@@ -219,6 +232,8 @@ export function Dashboard(props: {
 		if (!row) return "Enter opens selected item";
 		if (row.type === "balancing")
 			return "Enter/Space toggles automatic balancing";
+		if (row.type === "quotaAware")
+			return "Enter/Space toggles quota-aware account selection";
 		if (row.type === "connect") return "Enter/C connects a new provider";
 		if (confirmAccount() === `${row.providerID}/${row.alias}`)
 			return "Y confirms removal · N cancels";
@@ -237,6 +252,12 @@ export function Dashboard(props: {
 
 	const toggleBalancing = () => {
 		setBalancingEnabled(props.state.db, !balancing());
+		refreshDashboard();
+		props.state.refresh();
+	};
+
+	const toggleQuotaAware = () => {
+		setQuotaAwareSelectionEnabled(props.state.db, !quotaAware());
 		refreshDashboard();
 		props.state.refresh();
 	};
@@ -262,6 +283,7 @@ export function Dashboard(props: {
 		const row = current();
 		if (!row) return;
 		if (row.type === "balancing") return toggleBalancing();
+		if (row.type === "quotaAware") return toggleQuotaAware();
 		if (row.type === "connect") return props.openConnect();
 		if (row.type === "account")
 			return setConfirmAccount(`${row.providerID}/${row.alias}`);
@@ -411,6 +433,34 @@ export function Dashboard(props: {
 						>
 							Enter/Space toggles provider failover. Priority config is in the
 							header.
+						</text>
+					</Show>
+					<Row onMouseUp={toggleQuotaAware} selected={selected("quotaAware")}>
+						<text
+							fg={
+								selected("quotaAware")
+									? selectedColors().fg
+									: quotaAware()
+										? theme().success
+										: theme().textMuted
+							}
+							overflow="hidden"
+							truncate
+							wrapMode="none"
+						>
+							{rowMarker("quotaAware")} Prefer highest-quota account:{" "}
+							{quotaAware() ? "ON" : "OFF"}
+						</text>
+					</Row>
+					<Show when={!compact()}>
+						<text
+							fg={theme().textMuted}
+							overflow="hidden"
+							truncate
+							wrapMode="none"
+						>
+							When on, picks the healthy account with the most remaining quota
+							instead of the first alphabetically.
 						</text>
 					</Show>
 				</box>

@@ -1,7 +1,9 @@
 import type { Database } from "bun:sqlite";
 import { getAccount, listAccounts, normalizeAlias } from "../core/accounts";
+import { getQuotaAwareSelectionEnabled } from "../core/priority";
 import { now } from "../core/time";
 import type { Account } from "../core/types";
+import { rankByRemainingQuota } from "../core/usage/selection";
 
 export const INTERNAL_REQUEST_HEADER = "x-opencode-balancer-request";
 export const BALANCER_METADATA_KEY = "opencodeBalancerCommand";
@@ -79,9 +81,13 @@ export function chooseFailoverAccount(
 ) {
 	const timestamp = now();
 	const normalizedCurrentAlias = normalizeAlias(currentAlias);
-	return listAccounts(db, providerID).find((account) => {
+	const candidates = listAccounts(db, providerID).filter((account) => {
 		if (account.alias === normalizedCurrentAlias) return false;
 		if (account.disabled) return false;
 		return !account.rateLimitedUntil || account.rateLimitedUntil <= timestamp;
 	});
+	if (candidates.length === 0) return undefined;
+	if (!getQuotaAwareSelectionEnabled(db)) return candidates[0];
+
+	return rankByRemainingQuota(db, providerID, candidates)[0].account;
 }

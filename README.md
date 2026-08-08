@@ -4,7 +4,7 @@
 
 _Use multiple accounts and provider/model priorities in opencode, then fail over automatically when one account hits a limit._
 
-[![npm version](https://img.shields.io/npm/v/@thelioo/opencode-balancer?style=flat-square)](https://www.npmjs.com/package/@thelioo/opencode-balancer)
+[![npm version](https://img.shields.io/npm/v/@secondstrikerss/opencode-balancer?style=flat-square)](https://www.npmjs.com/package/@secondstrikerss/opencode-balancer)
 [![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![opencode plugin](https://img.shields.io/badge/opencode-plugin-111?style=flat-square)](https://opencode.ai/docs/plugins)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
@@ -37,8 +37,8 @@ It integrates with opencode's native provider connection flow. Use the plugin da
 Paste this into opencode or another coding agent running on your machine:
 
 ```text
-Install and configure @thelioo/opencode-balancer by following this guide:
-https://raw.githubusercontent.com/thelioo/opencode-balancer/refs/heads/main/INSTALL.txt
+Install and configure @secondstrikerss/opencode-balancer by following this guide:
+https://raw.githubusercontent.com/secondstrikerss/opencode-balancer/refs/heads/main/INSTALL.txt
 ```
 
 Or read the local guide: [INSTALL.txt](INSTALL.txt).
@@ -50,7 +50,7 @@ Add the plugin to your opencode config so the server hooks can run:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@thelioo/opencode-balancer"]
+  "plugin": ["@secondstrikerss/opencode-balancer"]
 }
 ```
 
@@ -59,7 +59,7 @@ Then add the same plugin to your opencode TUI config so the dashboard can load:
 ```json
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["@thelioo/opencode-balancer"]
+  "plugin": ["@secondstrikerss/opencode-balancer"]
 }
 ```
 
@@ -182,7 +182,7 @@ And add the same local path to your TUI config:
 
 | Problem | What to try |
 | --- | --- |
-| Plugin does not load | Confirm `plugin` is singular in opencode config, restart opencode, and check that the package name is `@thelioo/opencode-balancer`. |
+| Plugin does not load | Confirm `plugin` is singular in opencode config, restart opencode, and check that the package name is `@secondstrikerss/opencode-balancer`. |
 | Dashboard does not open | Confirm `tui.json` also contains the plugin, restart opencode, then try `Ctrl+B`, `/balancer`, or the command palette. |
 | Account was not saved | Use **New account** from the Balancer dashboard and complete opencode's native provider connection flow. |
 | Provider is skipped | Open the priority matrix and confirm the provider is enabled and has a model selected. |
@@ -192,4 +192,4 @@ And add the same local path to your TUI config:
 
 - [opencode plugins documentation](https://opencode.ai/docs/plugins)
 - [opencode configuration](https://opencode.ai/docs/config)
-- [npm package](https://www.npmjs.com/package/@thelioo/opencode-balancer)
+- [npm package](https://www.npmjs.com/package/@secondstrikerss/opencode-balancer)

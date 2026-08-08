@@ -43,7 +43,7 @@ export function openBalancerDatabase(path: string) {
 	const database = new Database(path);
 	try {
 		database.exec(
-			"PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;",
+			"PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 500;",
 		);
 		secureDatabaseFiles(path);
 		databases.set(path, database);

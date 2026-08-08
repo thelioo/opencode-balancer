@@ -303,7 +303,7 @@ export function startAuthWatcher(client: any, db: Database) {
 		readAuth: readNativeAuth,
 	});
 
-	const timer = setInterval(() => void watcher.poll(), 1_000);
+	const timer = setInterval(() => void watcher.poll().catch(() => {}), 2_000);
 	(timer as { unref?: () => void }).unref?.();
 }
 
