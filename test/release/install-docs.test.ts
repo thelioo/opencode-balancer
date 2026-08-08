@@ -14,9 +14,11 @@ describe("installation docs", () => {
 		const readme = read("README.md");
 
 		expect(installGuide).toContain(
-			"@thelioo/opencode-balancer (without @latest)",
+			"@secondstrikerss/opencode-balancer (without @latest)",
 		);
-		expect(installGuide).not.toContain("@thelioo/opencode-balancer@latest");
+		expect(installGuide).not.toContain(
+			"@secondstrikerss/opencode-balancer@latest",
+		);
 		expect(readme).toContain(
 			"Use the package name without an explicit `@latest` tag",
 		);

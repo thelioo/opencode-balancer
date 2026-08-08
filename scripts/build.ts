@@ -4,7 +4,11 @@ import solidTransformPlugin from "@opentui/solid/bun-plugin";
 await rm("dist", { force: true, recursive: true });
 
 const result = await Bun.build({
-	entrypoints: ["./src/index.ts", "./src/tui/tui.tsx"],
+	entrypoints: [
+		"./src/index.ts",
+		"./src/tui/tui.tsx",
+		"./src/tui/db-worker.ts",
+	],
 	external: [
 		"./components/*",
 		"@opencode-ai/plugin",

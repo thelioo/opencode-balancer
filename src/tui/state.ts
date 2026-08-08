@@ -7,7 +7,11 @@ import { storePath } from "../core/path";
 import { listPendingConnections } from "../core/pending";
 import { migrate } from "../core/schema";
 import type { Account, BalancerEvent, PendingConnection } from "../core/types";
-import { safePoll } from "./safe-poll";
+import {
+	forceTuiRefresh,
+	shutdownTuiCache,
+	subscribeTuiCache,
+} from "./db-cache";
 
 export type BalancerTuiState = {
 	db: Database;
@@ -26,17 +30,29 @@ export function createBalancerTuiState(): BalancerTuiState {
 	const db = openBalancerDatabase(dbPath);
 	migrate(db);
 
-	const [version, setVersion] = createSignal(0);
-	const [accounts, setAccounts] = createSignal<Account[]>([]);
-	const [pending, setPending] = createSignal<PendingConnection[]>([]);
-	const [events, setEvents] = createSignal<BalancerEvent[]>([]);
+	const [version, setVersion] = createSignal(1);
+	const [accounts, setAccounts] = createSignal<Account[]>(listAccounts(db));
+	const [pending, setPending] = createSignal<PendingConnection[]>(
+		listPendingConnections(db),
+	);
+	const [events, setEvents] = createSignal<BalancerEvent[]>(listEvents(db, 10));
+
+	const unsubCache = subscribeTuiCache((snapshot) => {
+		if (!snapshot) return;
+		setAccounts(snapshot.accounts);
+		setPending(snapshot.pending);
+		setEvents(snapshot.events);
+		setVersion((v) => v + 1);
+	});
 
 	const refresh = () => {
 		setAccounts(listAccounts(db));
 		setPending(listPendingConnections(db));
 		setEvents(listEvents(db, 10));
 		setVersion((current) => current + 1);
+		forceTuiRefresh();
 	};
+
 	const removeAccountView = (providerID: string, alias: string) => {
 		setAccounts((current) =>
 			current.filter(
@@ -45,28 +61,27 @@ export function createBalancerTuiState(): BalancerTuiState {
 			),
 		);
 		setVersion((current) => current + 1);
+		forceTuiRefresh();
 	};
+
 	const removePendingView = (pendingID: string) => {
 		setPending((current) =>
 			current.filter((pending) => pending.id !== pendingID),
 		);
 		setVersion((current) => current + 1);
+		forceTuiRefresh();
 	};
 
-	let interval: ReturnType<typeof setInterval> | undefined;
 	let disposed = false;
 
 	const dispose = () => {
 		if (disposed) return;
 		disposed = true;
-		if (interval) clearInterval(interval);
-		interval = undefined;
+		unsubCache();
+		shutdownTuiCache();
 		closeBalancerDatabase(dbPath);
 	};
 
-	refresh();
-
-	interval = setInterval(() => safePoll(refresh), 2000);
 	onCleanup(dispose);
 
 	return {
