@@ -25,7 +25,7 @@ describe("BalancerSidebar", () => {
 			"utf8",
 		);
 
-		expect(source).toContain("getBalancingEnabled");
+		expect(source).toContain("props.state.snapshot()?.balancingEnabled");
 		expect(source).toContain('<text fg={theme().text} wrapMode="none">');
 		expect(source).toContain("Balancer");
 		expect(source).toContain('{balancingEnabled() ? "ON" : "OFF"}');

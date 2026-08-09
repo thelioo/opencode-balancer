@@ -1,13 +1,9 @@
 /** @jsxImportSource @opentui/solid */
 
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
-import { createSignal, For, onCleanup, Show } from "solid-js";
-import { listAccounts } from "../../core/accounts";
-import { getBalancingEnabled } from "../../core/priority";
+import { For, Show } from "solid-js";
 import type { Account } from "../../core/types";
-import { getUsageSnapshot } from "../../core/usage/store";
 import type { ProviderUsageSnapshot } from "../../core/usage/types";
-import { safePoll } from "../safe-poll";
 import type { BalancerTuiState } from "../state";
 import { UsageSnapshotBar } from "./usage-display";
 
@@ -20,31 +16,13 @@ export type BalancerSidebarProps = {
 
 export function BalancerSidebar(props: BalancerSidebarProps) {
 	const theme = () => props.api.theme.current;
-	const [accounts, setAccounts] = createSignal<Account[]>(
-		listAccounts(props.state.db),
-	);
-	const [usage, setUsage] = createSignal<
-		Record<string, ProviderUsageSnapshot | undefined>
-	>({});
-	const [balancingEnabled, setBalancingEnabled] = createSignal(
-		getBalancingEnabled(props.state.db),
-	);
-	const refreshSidebar = () => {
-		const nextAccounts = listAccounts(props.state.db);
-		setAccounts(nextAccounts);
-		setBalancingEnabled(getBalancingEnabled(props.state.db));
-		setUsage(
-			Object.fromEntries(
-				nextAccounts.map((account) => [
-					`${account.providerID}/${account.alias}`,
-					getUsageSnapshot(props.state.db, account.providerID, account.alias),
-				]),
-			),
-		);
-	};
-	refreshSidebar();
-	const timer = setInterval(() => safePoll(refreshSidebar), 2000);
-	onCleanup(() => clearInterval(timer));
+	// Reads come from the worker-fed cache snapshot — no bun:sqlite access
+	// happens on the main/input thread here.
+	const accounts = (): Account[] => props.state.snapshot()?.accounts ?? [];
+	const balancingEnabled = (): boolean =>
+		props.state.snapshot()?.balancingEnabled ?? false;
+	const usage = (): Record<string, ProviderUsageSnapshot | undefined> =>
+		props.state.snapshot()?.usageSnapshots ?? {};
 	const Button = (buttonProps: { label: string; onClick: () => void }) => (
 		<box onMouseUp={buttonProps.onClick} paddingLeft={0} paddingRight={0}>
 			<text fg={theme().accent} truncate wrapMode="none">

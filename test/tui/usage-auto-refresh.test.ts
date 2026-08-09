@@ -48,6 +48,8 @@ function createState() {
 			},
 			removeAccountView: () => {},
 			removePendingView: () => {},
+			snapshot: () => null,
+			snapshotStale: () => false,
 			version: () => 0,
 		} satisfies BalancerTuiState,
 	};

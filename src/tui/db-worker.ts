@@ -1,72 +1,19 @@
-import { getSelectedAccount, listAccounts } from "../core/accounts";
-import { openBalancerDatabase } from "../core/database";
-import { listEvents } from "../core/events";
-import { storePath } from "../core/path";
-import { listPendingConnections } from "../core/pending";
-import {
-	getBalancingEnabled,
-	getQuotaAwareSelectionEnabled,
-	listProviderPriority,
-	resolveActiveSelection,
-} from "../core/priority";
-import { getUsageSnapshot } from "../core/usage/store";
 import type {
 	MainToWorkerMessage,
 	TuiSnapshot,
 	WorkerToMainMessage,
 } from "./db-worker-protocol";
+import { readSnapshot, snapshotsEqual } from "./snapshot";
 
-export function snapshotsEqual(
-	a: TuiSnapshot | null,
-	b: TuiSnapshot | null,
-): boolean {
-	if (a === b) return true;
-	if (!a || !b) return false;
-	return JSON.stringify(a) === JSON.stringify(b);
-}
+// Re-exported for backwards compatibility (test/tui/db-worker.test.ts and
+// anything else importing these from here) — the actual implementation now
+// lives in ./snapshot so it can be shared with the main thread's one-off
+// refresh path without pulling this file's self.onmessage registration into
+// the main-thread bundle.
+export { readSnapshot, snapshotsEqual };
 
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 let lastSnapshot: TuiSnapshot | null = null;
-
-export function readSnapshot(): TuiSnapshot {
-	const dbPath = storePath();
-	const db = openBalancerDatabase(dbPath);
-
-	const accounts = listAccounts(db);
-	const pending = listPendingConnections(db);
-	const events = listEvents(db, 10);
-	const balancingEnabled = getBalancingEnabled(db);
-	const quotaAwareSelectionEnabled = getQuotaAwareSelectionEnabled(db);
-
-	const usageSnapshots: Record<
-		string,
-		import("../core/usage/types").ProviderUsageSnapshot | undefined
-	> = {};
-	for (const account of accounts) {
-		const key = `${account.providerID}/${account.alias}`;
-		usageSnapshots[key] = getUsageSnapshot(
-			db,
-			account.providerID,
-			account.alias,
-		);
-	}
-
-	const providerPriority = listProviderPriority(db);
-	const selectedAccount = getSelectedAccount(db);
-	const activeSelection = resolveActiveSelection(db);
-
-	return {
-		accounts,
-		activeSelection,
-		balancingEnabled,
-		events,
-		pending,
-		providerPriority,
-		quotaAwareSelectionEnabled,
-		selectedAccount,
-		usageSnapshots,
-	};
-}
 
 function postToMain(msg: WorkerToMainMessage) {
 	if (typeof self !== "undefined" && typeof self.postMessage === "function") {

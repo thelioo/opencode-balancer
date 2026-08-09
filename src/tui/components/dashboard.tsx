@@ -2,23 +2,20 @@
 
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
 import {
+	createEffect,
 	createMemo,
 	createSignal,
 	For,
 	type JSX,
-	onCleanup,
 	onMount,
 	Show,
 } from "solid-js";
 import packageJson from "../../../package.json" with { type: "json" };
-import { listAccounts } from "../../core/accounts";
 import {
-	getBalancingEnabled,
-	getQuotaAwareSelectionEnabled,
 	setBalancingEnabled,
 	setQuotaAwareSelectionEnabled,
 } from "../../core/priority";
-import { getUsageSnapshot } from "../../core/usage/store";
+import type { Account } from "../../core/types";
 import type { ProviderUsageSnapshot } from "../../core/usage/types";
 import {
 	type DashboardFocusArea,
@@ -27,7 +24,6 @@ import {
 	reduceDashboardKey,
 } from "../dashboard-keys";
 import { dashboardContentHeight, dashboardLayoutMode } from "../responsive";
-import { safePoll } from "../safe-poll";
 import { selectedRowColors } from "../selection-colors";
 import type { BalancerTuiState } from "../state";
 import { UsageSnapshotBar } from "./usage-display";
@@ -63,16 +59,16 @@ export function Dashboard(props: {
 }) {
 	const theme = () => props.api.theme.current;
 	const selectedColors = () => selectedRowColors(theme());
-	const [accounts, setAccounts] = createSignal(listAccounts(props.state.db));
-	const [balancing, setBalancing] = createSignal(
-		getBalancingEnabled(props.state.db),
-	);
-	const [quotaAware, setQuotaAware] = createSignal(
-		getQuotaAwareSelectionEnabled(props.state.db),
-	);
-	const [usage, setUsage] = createSignal<
-		Record<string, ProviderUsageSnapshot | undefined>
-	>({});
+	// Account list stays on state's top-level `accounts` signal, which is
+	// kept in sync both by the worker cache and by state.refresh() after a
+	// write. Balancing/quota-aware/usage come from the cache snapshot.
+	const accounts = (): Account[] => props.state.accounts();
+	const balancing = (): boolean =>
+		props.state.snapshot()?.balancingEnabled ?? false;
+	const quotaAware = (): boolean =>
+		props.state.snapshot()?.quotaAwareSelectionEnabled ?? true;
+	const usage = (): Record<string, ProviderUsageSnapshot | undefined> =>
+		props.state.snapshot()?.usageSnapshots ?? {};
 	const layoutMode = () =>
 		dashboardLayoutMode({
 			height: (props.api.renderer as unknown as { height?: number }).height,
@@ -102,37 +98,14 @@ export function Dashboard(props: {
 		Math.max(0, Math.min(value, Math.max(0, rows().length - 1)));
 	const clampHeaderCursor = (value: number) =>
 		Math.max(0, Math.min(value, headerActions.length - 1));
-	let accountsSig = "";
-	let usageSig = "";
-	const refreshDashboard = () => {
-		const nextAccounts = listAccounts(props.state.db);
-		const nextUsage = Object.fromEntries(
-			nextAccounts.map((account) => [
-				`${account.providerID}/${account.alias}`,
-				getUsageSnapshot(props.state.db, account.providerID, account.alias),
-			]),
-		);
-		const nextAccountsSig = JSON.stringify(nextAccounts);
-		const nextUsageSig = JSON.stringify(nextUsage);
-		// Only push new object/array identities into the signals when the data
-		// actually changed. Re-setting them every tick notifies subscribers and
-		// makes opencode's route re-render (remounting this component and
-		// resetting the selection cursor).
-		if (nextAccountsSig !== accountsSig) {
-			accountsSig = nextAccountsSig;
-			setAccounts(nextAccounts);
-			setCursor((value) => clampCursor(value));
-		}
-		if (nextUsageSig !== usageSig) {
-			usageSig = nextUsageSig;
-			setUsage(nextUsage);
-		}
-		setBalancing(getBalancingEnabled(props.state.db));
-		setQuotaAware(getQuotaAwareSelectionEnabled(props.state.db));
-	};
-	refreshDashboard();
-	const timer = setInterval(() => safePoll(refreshDashboard), 1500);
-	onCleanup(() => clearInterval(timer));
+	// The worker cache only pushes a new snapshot when its content actually
+	// changed (see snapshotsEqual in ./snapshot), so `rows()` only recomputes
+	// on real changes — this just keeps the cursor in bounds when that
+	// happens, replacing the old poll-driven clamp.
+	createEffect(() => {
+		rows();
+		setCursor((value) => clampCursor(value));
+	});
 	const Button = (buttonProps: {
 		label: string;
 		danger?: boolean;
@@ -252,13 +225,13 @@ export function Dashboard(props: {
 
 	const toggleBalancing = () => {
 		setBalancingEnabled(props.state.db, !balancing());
-		refreshDashboard();
+		// refresh() re-reads synchronously (it's write-triggered, not a
+		// timer), so balancing() reflects the new value immediately.
 		props.state.refresh();
 	};
 
 	const toggleQuotaAware = () => {
 		setQuotaAwareSelectionEnabled(props.state.db, !quotaAware());
-		refreshDashboard();
 		props.state.refresh();
 	};
 
@@ -270,7 +243,6 @@ export function Dashboard(props: {
 		) {
 			setConfirmAccount(undefined);
 			props.removeAccount(row.providerID, row.alias);
-			refreshDashboard();
 		}
 	};
 
@@ -589,7 +561,6 @@ export function Dashboard(props: {
 														account.providerID,
 														account.alias,
 													);
-													refreshDashboard();
 												}}
 											/>
 											<Button
