@@ -38,6 +38,8 @@ type DashboardRow =
 
 type HeaderAction = { type: "close" | "priority"; key: string; label: string };
 
+type ScrollBoxHandle = { scrollChildIntoView?: (childId: string) => void };
+
 // Selection state lives at module scope on purpose: when the plugin is
 // installed from npm, opentui's runtime bridge can make opencode's reactive
 // route computation track signals read while this component mounts, so every
@@ -106,6 +108,16 @@ export function Dashboard(props: {
 		rows();
 		setCursor((value) => clampCursor(value));
 	});
+	// The scrollbox viewport is fixed-height; the cursor is tracked
+	// independently. Keep the selected row in view whenever the cursor or
+	// the row list changes (keyboard, mouse, or the clamp above after a
+	// delete/refresh). scrollChildIntoView scrolls only when the row is
+	// actually outside the viewport, and rows are located by their stable
+	// `id` (matching the `key` used in the rows memo below).
+	createEffect(() => {
+		const key = rows()[cursor()]?.key;
+		if (key) scrollBox?.scrollChildIntoView?.(key);
+	});
 	const Button = (buttonProps: {
 		label: string;
 		danger?: boolean;
@@ -148,6 +160,7 @@ export function Dashboard(props: {
 	);
 
 	const Row = (rowProps: {
+		id?: string;
 		selected?: boolean;
 		onMouseUp?: () => void;
 		children: JSX.Element;
@@ -157,6 +170,7 @@ export function Dashboard(props: {
 			flexDirection="row"
 			flexShrink={0}
 			height={1}
+			id={rowProps.id}
 			minWidth={0}
 			onMouseUp={rowProps.onMouseUp}
 			width="100%"
@@ -312,6 +326,7 @@ export function Dashboard(props: {
 	};
 
 	let container: { focus?: () => void } | undefined;
+	let scrollBox: ScrollBoxHandle | undefined;
 	onMount(() => container?.focus?.());
 
 	return (
@@ -371,7 +386,11 @@ export function Dashboard(props: {
 				</box>
 			</box>
 
-			<scrollbox height={contentHeight()} scrollbarOptions={{ visible: false }}>
+			<scrollbox
+				height={contentHeight()}
+				ref={(ref: unknown) => (scrollBox = ref as ScrollBoxHandle | undefined)}
+				scrollbarOptions={{ visible: false }}
+			>
 				<box
 					flexDirection="column"
 					gap={0}
@@ -379,7 +398,11 @@ export function Dashboard(props: {
 					paddingBottom={1}
 				>
 					<SectionTitle label="BALANCING" />
-					<Row onMouseUp={toggleBalancing} selected={selected("balancing")}>
+					<Row
+						id="balancing"
+						onMouseUp={toggleBalancing}
+						selected={selected("balancing")}
+					>
 						<text
 							fg={
 								selected("balancing")
@@ -407,7 +430,11 @@ export function Dashboard(props: {
 							header.
 						</text>
 					</Show>
-					<Row onMouseUp={toggleQuotaAware} selected={selected("quotaAware")}>
+					<Row
+						id="quotaAware"
+						onMouseUp={toggleQuotaAware}
+						selected={selected("quotaAware")}
+					>
 						<text
 							fg={
 								selected("quotaAware")
@@ -447,7 +474,11 @@ export function Dashboard(props: {
 							setCursor(rows().findIndex((row) => row.key === "connect"))
 						}
 					>
-						<Row onMouseUp={props.openConnect} selected={selected("connect")}>
+						<Row
+							id="connect"
+							onMouseUp={props.openConnect}
+							selected={selected("connect")}
+						>
 							<text
 								fg={selected("connect") ? selectedColors().fg : theme().accent}
 								overflow="hidden"
@@ -489,6 +520,7 @@ export function Dashboard(props: {
 									}
 								>
 									<Row
+										id={`account:${account.providerID}/${account.alias}`}
 										selected={selected(
 											`account:${account.providerID}/${account.alias}`,
 										)}
