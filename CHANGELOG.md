@@ -1,4 +1,24 @@
-# @thelioo/opencode-balancer
+# @secondstrikerss/opencode-balancer
+
+## 2.0.1
+
+### Patch Changes
+
+- 862cb74: Fix the Balancer dashboard list not scrolling when the cursor moves past the bottom of the viewport. The `scrollbox` now keeps the selected row in view via `scrollChildIntoView`, following the cursor on keyboard navigation, mouse clicks, and cursor clamping after removes or refreshes.
+- 28483e7: Read the balancer-bar and selected-provider state from the worker-fed cache snapshot instead of running live `bun:sqlite` queries on the main thread. These closures render on every `session_prompt_right` tick (including mid-stream), so this removes the heaviest query in the codebase from the per-render path.
+
+## 2.0.0
+
+### Major Changes
+
+- 5ec6178: Move all TUI-side SQLite polling into a dedicated Worker thread with a consolidated in-memory cache. The main thread never calls `bun:sqlite` directly anymore; components read from the cache, which is updated only via `postMessage` from the worker. This makes it structurally impossible for a slow or locked SQLite read to stall keyboard input and rendering.
+- a54cd63: Complete the worker migration and attach it: `db-worker.ts` is a build entrypoint that polls on its own thread, `snapshot.ts` holds the shared pure read, `db-cache.ts` manages the worker lifecycle and staleness detection, and the dashboard, priority screen, sidebar, and status indicator read their data from the cache.
+- d3858ce: Rewrite INSTALL.txt to install the local checkout via a `file://` URL instead of the npm registry. The installer locates a directory whose `package.json` names `@secondstrikerss/opencode-balancer`, verifies `dist/index.js` and `dist/tui/tui.js` are current, and forbids npm/bun/pnpm install and any npm package entries. This is a breaking change for users following the previous npm-based instructions.
+
+### Patch Changes
+
+- 8dcd520: Retry HTTP 502 responses with another healthy account, optimize the account-changing mechanism, and fix the TUI freezing while an account rotation happens.
+- 2ec4e21: Detect quota-exceeded responses by inspecting the response body in addition to status codes, so providers that signal exhaustion with a 200 + limit message are handled too.
 
 ## 0.2.18
 
