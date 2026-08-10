@@ -14,6 +14,7 @@ import {
 } from "../core/pending";
 import { refreshAccountUsage } from "../core/usage";
 import { saveUsageSnapshot } from "../core/usage/store";
+import { forceTuiRefresh } from "./db-cache";
 import type { BalancerTuiState } from "./state";
 
 type AuthSetApi = {
@@ -104,10 +105,9 @@ export async function refreshUsageForAccount(
 	options: RefreshUsageOptions = {},
 ) {
 	const account =
-		getAccount(state.db, providerID, alias) ??
 		state.accounts().find((candidate) => {
 			return candidate.providerID === providerID && candidate.alias === alias;
-		});
+		}) ?? getAccount(state.db, providerID, alias);
 
 	if (!account) {
 		api.ui.toast({
@@ -131,8 +131,18 @@ export async function refreshUsageForAccount(
 					? "usage_unavailable"
 					: "usage_refreshed",
 		});
-		state.refresh();
-		if (!options.silent) {
+		if (options.silent) {
+			// Background auto-refresh: several accounts' usage checks can
+			// resolve within milliseconds of each other, so calling the
+			// heavy synchronous state.refresh() (which rebuilds the whole
+			// snapshot, including resolveActiveSelection for every
+			// provider) here could fire a burst of main-thread stalls
+			// completely independent of anything the person is doing.
+			// forceTuiRefresh() just nudges the worker to recompute and
+			// push the update off the main thread instead.
+			forceTuiRefresh();
+		} else {
+			state.refresh();
 			api.ui.toast({
 				message: snapshot.message,
 				variant: snapshot.confidence === "unavailable" ? "warning" : "success",

@@ -1,4 +1,3 @@
-import { listAccounts } from "../core/accounts";
 import type { refreshAccountUsage } from "../core/usage";
 import { refreshUsageForAccount } from "./actions";
 import type { BalancerTuiState } from "./state";
@@ -39,9 +38,7 @@ export function createUsageAutoRefresh(
 	};
 
 	const refreshNow = async () => {
-		const accounts = listAccounts(state.db).filter(
-			(account) => !account.disabled,
-		);
+		const accounts = state.accounts().filter((account) => !account.disabled);
 		await Promise.all(
 			accounts.map((account) => refreshOne(account.providerID, account.alias)),
 		);
