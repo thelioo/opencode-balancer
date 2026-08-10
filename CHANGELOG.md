@@ -1,5 +1,11 @@
 # @secondstrikerss/opencode-balancer
 
+## 2.1.0
+
+### Minor Changes
+
+- 5a7c352: Stop background usage auto-refresh from stalling the main thread. Silent usage refreshes previously called the heavy synchronous `state.refresh()` (a full snapshot rebuild including `resolveActiveSelection` for every provider) once per account, so when several accounts' usage checks resolved within milliseconds of each other they fired a burst of main-thread stalls. Silent refreshes now nudge the worker cache via `forceTuiRefresh()` instead and read accounts from the cache-backed `state.accounts()` rather than a direct `bun:sqlite` query; `usage-auto-refresh` lists enabled accounts from the cache the same way.
+
 ## 2.0.1
 
 ### Patch Changes
