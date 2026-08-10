@@ -2,18 +2,20 @@
 
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
 import {
+	createEffect,
 	createMemo,
 	createSignal,
 	For,
 	type JSX,
-	onCleanup,
 	onMount,
 	Show,
 } from "solid-js";
 import packageJson from "../../../package.json" with { type: "json" };
-import { listAccounts } from "../../core/accounts";
-import { getBalancingEnabled, setBalancingEnabled } from "../../core/priority";
-import { getUsageSnapshot } from "../../core/usage/store";
+import {
+	setBalancingEnabled,
+	setQuotaAwareSelectionEnabled,
+} from "../../core/priority";
+import type { Account } from "../../core/types";
 import type { ProviderUsageSnapshot } from "../../core/usage/types";
 import {
 	type DashboardFocusArea,
@@ -30,10 +32,13 @@ type KeyLike = { name?: string };
 
 type DashboardRow =
 	| { type: "balancing"; key: string }
+	| { type: "quotaAware"; key: string }
 	| { type: "connect"; key: string }
 	| { type: "account"; key: string; providerID: string; alias: string };
 
 type HeaderAction = { type: "close" | "priority"; key: string; label: string };
+
+type ScrollBoxHandle = { scrollChildIntoView?: (childId: string) => void };
 
 // Selection state lives at module scope on purpose: when the plugin is
 // installed from npm, opentui's runtime bridge can make opencode's reactive
@@ -56,13 +61,16 @@ export function Dashboard(props: {
 }) {
 	const theme = () => props.api.theme.current;
 	const selectedColors = () => selectedRowColors(theme());
-	const [accounts, setAccounts] = createSignal(listAccounts(props.state.db));
-	const [balancing, setBalancing] = createSignal(
-		getBalancingEnabled(props.state.db),
-	);
-	const [usage, setUsage] = createSignal<
-		Record<string, ProviderUsageSnapshot | undefined>
-	>({});
+	// Account list stays on state's top-level `accounts` signal, which is
+	// kept in sync both by the worker cache and by state.refresh() after a
+	// write. Balancing/quota-aware/usage come from the cache snapshot.
+	const accounts = (): Account[] => props.state.accounts();
+	const balancing = (): boolean =>
+		props.state.snapshot()?.balancingEnabled ?? false;
+	const quotaAware = (): boolean =>
+		props.state.snapshot()?.quotaAwareSelectionEnabled ?? true;
+	const usage = (): Record<string, ProviderUsageSnapshot | undefined> =>
+		props.state.snapshot()?.usageSnapshots ?? {};
 	const layoutMode = () =>
 		dashboardLayoutMode({
 			height: (props.api.renderer as unknown as { height?: number }).height,
@@ -79,6 +87,7 @@ export function Dashboard(props: {
 	];
 	const rows = createMemo<DashboardRow[]>(() => [
 		{ key: "balancing", type: "balancing" },
+		{ key: "quotaAware", type: "quotaAware" },
 		{ key: "connect", type: "connect" },
 		...accounts().map((account) => ({
 			alias: account.alias,
@@ -91,36 +100,24 @@ export function Dashboard(props: {
 		Math.max(0, Math.min(value, Math.max(0, rows().length - 1)));
 	const clampHeaderCursor = (value: number) =>
 		Math.max(0, Math.min(value, headerActions.length - 1));
-	let accountsSig = "";
-	let usageSig = "";
-	const refreshDashboard = () => {
-		const nextAccounts = listAccounts(props.state.db);
-		const nextUsage = Object.fromEntries(
-			nextAccounts.map((account) => [
-				`${account.providerID}/${account.alias}`,
-				getUsageSnapshot(props.state.db, account.providerID, account.alias),
-			]),
-		);
-		const nextAccountsSig = JSON.stringify(nextAccounts);
-		const nextUsageSig = JSON.stringify(nextUsage);
-		// Only push new object/array identities into the signals when the data
-		// actually changed. Re-setting them every tick notifies subscribers and
-		// makes opencode's route re-render (remounting this component and
-		// resetting the selection cursor).
-		if (nextAccountsSig !== accountsSig) {
-			accountsSig = nextAccountsSig;
-			setAccounts(nextAccounts);
-			setCursor((value) => clampCursor(value));
-		}
-		if (nextUsageSig !== usageSig) {
-			usageSig = nextUsageSig;
-			setUsage(nextUsage);
-		}
-		setBalancing(getBalancingEnabled(props.state.db));
-	};
-	refreshDashboard();
-	const timer = setInterval(refreshDashboard, 500);
-	onCleanup(() => clearInterval(timer));
+	// The worker cache only pushes a new snapshot when its content actually
+	// changed (see snapshotsEqual in ./snapshot), so `rows()` only recomputes
+	// on real changes — this just keeps the cursor in bounds when that
+	// happens, replacing the old poll-driven clamp.
+	createEffect(() => {
+		rows();
+		setCursor((value) => clampCursor(value));
+	});
+	// The scrollbox viewport is fixed-height; the cursor is tracked
+	// independently. Keep the selected row in view whenever the cursor or
+	// the row list changes (keyboard, mouse, or the clamp above after a
+	// delete/refresh). scrollChildIntoView scrolls only when the row is
+	// actually outside the viewport, and rows are located by their stable
+	// `id` (matching the `key` used in the rows memo below).
+	createEffect(() => {
+		const key = rows()[cursor()]?.key;
+		if (key) scrollBox?.scrollChildIntoView?.(key);
+	});
 	const Button = (buttonProps: {
 		label: string;
 		danger?: boolean;
@@ -163,6 +160,7 @@ export function Dashboard(props: {
 	);
 
 	const Row = (rowProps: {
+		id?: string;
 		selected?: boolean;
 		onMouseUp?: () => void;
 		children: JSX.Element;
@@ -172,6 +170,7 @@ export function Dashboard(props: {
 			flexDirection="row"
 			flexShrink={0}
 			height={1}
+			id={rowProps.id}
 			minWidth={0}
 			onMouseUp={rowProps.onMouseUp}
 			width="100%"
@@ -203,6 +202,7 @@ export function Dashboard(props: {
 		if (focusArea() === "header") return currentHeader()?.type ?? "header";
 		if (!row) return "none";
 		if (row.type === "balancing") return "balancing";
+		if (row.type === "quotaAware") return "quotaAware";
 		if (row.type === "connect") return "connect";
 		if (row.type === "account") return `account/${row.providerID}/${row.alias}`;
 		return "priority";
@@ -219,6 +219,8 @@ export function Dashboard(props: {
 		if (!row) return "Enter opens selected item";
 		if (row.type === "balancing")
 			return "Enter/Space toggles automatic balancing";
+		if (row.type === "quotaAware")
+			return "Enter/Space toggles quota-aware account selection";
 		if (row.type === "connect") return "Enter/C connects a new provider";
 		if (confirmAccount() === `${row.providerID}/${row.alias}`)
 			return "Y confirms removal · N cancels";
@@ -237,7 +239,13 @@ export function Dashboard(props: {
 
 	const toggleBalancing = () => {
 		setBalancingEnabled(props.state.db, !balancing());
-		refreshDashboard();
+		// refresh() re-reads synchronously (it's write-triggered, not a
+		// timer), so balancing() reflects the new value immediately.
+		props.state.refresh();
+	};
+
+	const toggleQuotaAware = () => {
+		setQuotaAwareSelectionEnabled(props.state.db, !quotaAware());
 		props.state.refresh();
 	};
 
@@ -249,7 +257,6 @@ export function Dashboard(props: {
 		) {
 			setConfirmAccount(undefined);
 			props.removeAccount(row.providerID, row.alias);
-			refreshDashboard();
 		}
 	};
 
@@ -262,6 +269,7 @@ export function Dashboard(props: {
 		const row = current();
 		if (!row) return;
 		if (row.type === "balancing") return toggleBalancing();
+		if (row.type === "quotaAware") return toggleQuotaAware();
 		if (row.type === "connect") return props.openConnect();
 		if (row.type === "account")
 			return setConfirmAccount(`${row.providerID}/${row.alias}`);
@@ -318,6 +326,7 @@ export function Dashboard(props: {
 	};
 
 	let container: { focus?: () => void } | undefined;
+	let scrollBox: ScrollBoxHandle | undefined;
 	onMount(() => container?.focus?.());
 
 	return (
@@ -377,7 +386,11 @@ export function Dashboard(props: {
 				</box>
 			</box>
 
-			<scrollbox height={contentHeight()} scrollbarOptions={{ visible: false }}>
+			<scrollbox
+				height={contentHeight()}
+				ref={(ref: unknown) => (scrollBox = ref as ScrollBoxHandle | undefined)}
+				scrollbarOptions={{ visible: false }}
+			>
 				<box
 					flexDirection="column"
 					gap={0}
@@ -385,7 +398,11 @@ export function Dashboard(props: {
 					paddingBottom={1}
 				>
 					<SectionTitle label="BALANCING" />
-					<Row onMouseUp={toggleBalancing} selected={selected("balancing")}>
+					<Row
+						id="balancing"
+						onMouseUp={toggleBalancing}
+						selected={selected("balancing")}
+					>
 						<text
 							fg={
 								selected("balancing")
@@ -413,6 +430,38 @@ export function Dashboard(props: {
 							header.
 						</text>
 					</Show>
+					<Row
+						id="quotaAware"
+						onMouseUp={toggleQuotaAware}
+						selected={selected("quotaAware")}
+					>
+						<text
+							fg={
+								selected("quotaAware")
+									? selectedColors().fg
+									: quotaAware()
+										? theme().success
+										: theme().textMuted
+							}
+							overflow="hidden"
+							truncate
+							wrapMode="none"
+						>
+							{rowMarker("quotaAware")} Prefer highest-quota account:{" "}
+							{quotaAware() ? "ON" : "OFF"}
+						</text>
+					</Row>
+					<Show when={!compact()}>
+						<text
+							fg={theme().textMuted}
+							overflow="hidden"
+							truncate
+							wrapMode="none"
+						>
+							When on, picks the healthy account with the most remaining quota
+							instead of the first alphabetically.
+						</text>
+					</Show>
 				</box>
 
 				<box flexDirection="column" gap={0} paddingBottom={1}>
@@ -425,7 +474,11 @@ export function Dashboard(props: {
 							setCursor(rows().findIndex((row) => row.key === "connect"))
 						}
 					>
-						<Row onMouseUp={props.openConnect} selected={selected("connect")}>
+						<Row
+							id="connect"
+							onMouseUp={props.openConnect}
+							selected={selected("connect")}
+						>
 							<text
 								fg={selected("connect") ? selectedColors().fg : theme().accent}
 								overflow="hidden"
@@ -467,6 +520,7 @@ export function Dashboard(props: {
 									}
 								>
 									<Row
+										id={`account:${account.providerID}/${account.alias}`}
 										selected={selected(
 											`account:${account.providerID}/${account.alias}`,
 										)}
@@ -539,7 +593,6 @@ export function Dashboard(props: {
 														account.providerID,
 														account.alias,
 													);
-													refreshDashboard();
 												}}
 											/>
 											<Button

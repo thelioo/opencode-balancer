@@ -1,78 +1,122 @@
 opencode-balancer installation guide for AI agents
 
 Goal
-Install @thelioo/opencode-balancer as both an opencode server plugin and an opencode TUI plugin without removing or rewriting the user's existing opencode configuration.
+Install the local checkout of opencode-balancer as both an opencode
+server plugin and an opencode TUI plugin, without removing or rewriting
+the user's existing opencode configuration. The plugin is loaded
+directly from the local source directory — no npm install, no package
+download, no registry lookup is required or allowed.
 
 What this plugin does
-opencode-balancer lets opencode users save multiple authenticated accounts per provider, manage them from a TUI dashboard, choose provider/model priority, and automatically retry with another healthy account when the active account is rate-limited.
+opencode-balancer lets opencode users save multiple authenticated accounts
+per provider, manage them from a TUI dashboard, choose provider/model
+priority, and automatically retry with another healthy account when the
+active account is rate-limited.
 
 Important rules
-- Do not run npm install, bun install, or other package install commands for this plugin during user setup. opencode installs npm plugins automatically with Bun at startup.
-- Preserve existing opencode config, TUI config, plugins, comments, formatting, providers, agents, MCP servers, and permissions whenever possible.
+- Do NOT run npm install, bun install, pnpm install, or any other package
+  manager. The local plugin directory is consumed directly.
+- Do NOT add the npm package name "@secondstrikerss/opencode-balancer"
+  to either config or to package.json. The plugin is loaded from the
+  local checkout, not from the registry.
+- Preserve existing opencode config, TUI config, plugins, comments,
+  formatting, providers, agents, MCP servers, and permissions whenever
+  possible.
 - Use the singular key "plugin", not "plugins".
-- Add the plugin only if it is not already present.
-- Prefer @thelioo/opencode-balancer (without @latest) for user installs.
+- Add the local plugin entry only if it is not already present.
 - Keep config changes minimal and do not remove unrelated user settings.
 
 Steps
-1. Locate the user's opencode config.
+1. Locate the local checkout of opencode-balancer. Look for a directory
+   whose package.json has
+     "name": "@secondstrikerss/opencode-balancer"
+   Candidates to inspect, in order:
+     a. The current working directory, if its package.json matches.
+     b. A sibling directory named opencode-balancer of the cwd.
+     c. ~/AIProjects/secondstrikerss-opencode-balancer/opencode-balancer.
+     d. Any directory the user has explicitly named.
+   If none of these match, ask the user for the absolute path before
+   proceeding. Do not guess or hard-code.
+
+2. From the located checkout, compute the absolute path and convert it
+   to a file:// URL, percent-encoding any characters that need it (most
+   importantly spaces and '#'). The plugin entry added to opencode's
+   config must be exactly this file:// URL.
+
+3. Verify the build output exists:
+   <checkout>/dist/index.js and <checkout>/dist/tui/tui.js must both
+   be present. If either is missing, or if any file under <checkout>/src
+   is newer than its counterpart under <checkout>/dist, run
+     bun run build
+   from the checkout root and wait for it to exit 0. If bun is not
+   available, stop and ask the user to run the build themselves before
+   restarting opencode.
+
+4. Locate the user's opencode config.
    - Prefer ~/.config/opencode/opencode.jsonc if it exists.
    - Otherwise use ~/.config/opencode/opencode.json if it exists.
-   - If neither exists, create ~/.config/opencode/opencode.json with a minimal JSON object.
+   - If neither exists, create ~/.config/opencode/opencode.json with
+     a minimal JSON object.
 
-2. Ensure the config has a top-level plugin array.
+5. Ensure the config has a top-level plugin array.
    - If plugin already exists and is an array, keep all existing entries.
    - If plugin is missing, create it.
    - If the config is JSONC, keep JSONC syntax valid.
    - If the config is JSON, keep JSON syntax valid.
 
-3. Add this plugin entry to the opencode config plugin array:
-   @thelioo/opencode-balancer
+6. Add the file:// URL from step 2 to the opencode config plugin array
+   if it is not already present. Two URLs that point at the same
+   absolute path (with or without trailing slash, with or without
+   percent-encoding) count as the same entry — do not add a duplicate.
 
-4. Locate the user's opencode TUI config.
+7. Locate the user's opencode TUI config.
    - Prefer ~/.config/opencode/tui.jsonc if it exists.
    - Otherwise use ~/.config/opencode/tui.json if it exists.
-   - If neither exists, create ~/.config/opencode/tui.json with a minimal JSON object.
+   - If neither exists, create ~/.config/opencode/tui.json with
+     a minimal JSON object.
 
-5. Ensure the TUI config has a top-level plugin array.
-   - If plugin already exists and is an array, keep all existing entries.
-   - If plugin is missing, create it.
-   - If the config is JSONC, keep JSONC syntax valid.
-   - If the config is JSON, keep JSON syntax valid.
+8. Ensure the TUI config has a top-level plugin array.
+   - Same rules as step 5.
 
-6. Add this plugin entry to the TUI config plugin array:
-   @thelioo/opencode-balancer
+9. Add the same file:// URL from step 2 to the TUI config plugin array
+   if it is not already present (same dedup rule as step 6).
 
-7. Save both configs.
+10. Save both configs.
 
-8. Show the user both final plugin arrays.
+11. Show the user both final plugin arrays.
 
-9. Tell the user to restart opencode.
+12. Tell the user to restart opencode.
 
 Expected config shape
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@thelioo/opencode-balancer"]
+  "plugin": ["file://<absolute-path-to-local-checkout>"]
 }
 
 Expected TUI config shape
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["@thelioo/opencode-balancer"]
+  "plugin": ["file://<absolute-path-to-local-checkout>"]
 }
 
 After restart
-1. Tell the user to open the Balancer dashboard using one of these options:
+1. Tell the user to open the Balancer dashboard using one of these
+   options:
    - Press Ctrl+B.
    - Run /balancer.
    - Open "Open Balancer Dashboard" from the opencode command palette.
    - Use the Balancer button in the sidebar if visible.
 
-2. Tell the user to choose "New account" in the dashboard, or press C, to start opencode's native provider connection flow.
+2. Tell the user to choose "New account" in the dashboard, or press C,
+   to start opencode's native provider connection flow.
 
-3. Tell the user to complete the provider connection in opencode. The plugin detects the changed provider credentials and saves them from the TUI workflow automatically. If the credentials match an existing saved account, the saved account is refreshed instead of duplicated.
+3. Tell the user to complete the provider connection in opencode. The
+   plugin detects the changed provider credentials and saves them from
+   the TUI workflow automatically. If the credentials match an existing
+   saved account, the saved account is refreshed instead of duplicated.
 
-4. Tell the user to open the priority matrix from the dashboard header, or press P, to configure automatic balancing:
+4. Tell the user to open the priority matrix from the dashboard header,
+   or press P, to configure automatic balancing:
    - Press B to turn automatic balancing on or off.
    - Press Enter on a provider to choose its model.
    - Use Shift+Up and Shift+Down to reorder provider priority.
@@ -81,15 +125,27 @@ After restart
 5. Remind the user to restart opencode after any later config changes.
 
 Security note
-The plugin stores saved provider credentials locally in balancer.sqlite under the opencode config directory, usually ~/.config/opencode/balancer.sqlite or OPENCODE_CONFIG_DIR/balancer.sqlite. Keep this file private and never commit, paste, or share it.
+The plugin stores saved provider credentials locally in balancer.sqlite
+under the opencode config directory, usually ~/.config/opencode/balancer.sqlite
+or OPENCODE_CONFIG_DIR/balancer.sqlite. Keep this file private and never
+commit, paste, or share it.
 
 TUI-only workflow
-/balancer opens the Balancer dashboard in the TUI. Account management, provider/model priority, supported usage snapshots, and balancing settings are handled from the TUI only.
+/balancer opens the Balancer dashboard in the TUI. Account management,
+provider/model priority, supported usage snapshots, and balancing
+settings are handled from the TUI only.
 
 Verification
-- Confirm the opencode config contains @thelioo/opencode-balancer in the plugin array.
-- Confirm the opencode TUI config contains @thelioo/opencode-balancer in the plugin array.
+- Confirm the opencode config contains the local file:// path in the
+  plugin array.
+- Confirm the opencode TUI config contains the local file:// path in
+  the plugin array.
 - Confirm no existing plugin entries were removed.
+- Confirm no npm or registry install was attempted.
+- Confirm dist/index.js and dist/tui/tui.js exist and are at least as
+  new as their src/ counterparts.
 - Confirm the user restarted opencode after the config change.
-- Confirm the Balancer dashboard opens with Ctrl+B, /balancer, or the command palette.
-- Confirm at least one account can be connected from the dashboard before helping configure balancing.
+- Confirm the Balancer dashboard opens with Ctrl+B, /balancer, or the
+  command palette.
+- Confirm at least one account can be connected from the dashboard
+  before helping configure balancing.

@@ -4,6 +4,7 @@ import { getBalancingEnabled } from "../core/priority";
 import type { Account } from "../core/types";
 import { setNativeAuth, showToast } from "./native";
 import {
+	bodyLooksQuotaExceeded,
 	chooseFailoverAccount,
 	INTERNAL_REQUEST_HEADER,
 	markRateLimited,
@@ -91,6 +92,25 @@ function cloneRequestInput(
 	return [input, { ...init, headers }];
 }
 
+// Peeks at the response body to check for quota-exceeded phrasing when the
+// status code alone isn't in RETRYABLE_STATUS. Always operates on a clone so
+// the original response body is left untouched for the real caller.
+async function responseLooksQuotaExceeded(response: Response) {
+	// Only bother sniffing error-shaped responses (or a bare 200 that some
+	// providers use to wrap an error payload). Skip normal 2xx success.
+	if (response.ok && response.status !== 200) return false;
+	const contentType = response.headers.get("content-type") ?? "";
+	if (contentType && !/json|text/i.test(contentType)) return false;
+
+	try {
+		const text = await response.clone().text();
+		if (!text || text.length > 20_000) return false;
+		return bodyLooksQuotaExceeded(text);
+	} catch {
+		return false;
+	}
+}
+
 function retryAfterMs(response: Response) {
 	const retryAfter = response.headers.get("retry-after");
 	if (!retryAfter) return 60_000;
@@ -134,14 +154,20 @@ export function installFetchPatch(db: Database, client: any) {
 				attemptHeaders,
 			);
 			const response = await originalFetch(nextInput, nextInit);
-			if (!RETRYABLE_STATUS.has(response.status)) return response;
+			const statusRetryable = RETRYABLE_STATUS.has(response.status);
+			const quotaExceeded =
+				!statusRetryable && (await responseLooksQuotaExceeded(response));
+			if (!statusRetryable && !quotaExceeded) return response;
 
-			markRateLimited(
-				db,
-				account.providerID,
-				account.alias,
-				retryAfterMs(response),
-			);
+			// Quota-exceeded errors (e.g. opencode Zen's "Free usage exceeded")
+			// rarely carry a useful Retry-After header, and the default 60s is
+			// too short for a daily/hourly quota reset. Give those a longer
+			// cooldown so this account isn't retried again almost immediately.
+			const cooldownMs = quotaExceeded
+				? Math.max(retryAfterMs(response), 30 * 60_000)
+				: retryAfterMs(response);
+
+			markRateLimited(db, account.providerID, account.alias, cooldownMs);
 			if (!getBalancingEnabled(db)) return response;
 			if (attempt === maxAttempts - 1) return response;
 
@@ -150,9 +176,10 @@ export function installFetchPatch(db: Database, client: any) {
 
 			account = setActiveAccount(db, next.providerID, next.alias);
 			await setNativeAuth(client, account.providerID, account.auth, db);
+			const reason = quotaExceeded ? "quota exceeded" : "rate limited";
 			await showToast(
 				client,
-				`Balancer: ${pending.providerID}/${pending.account.alias} is rate limited. Switching to ${account.alias}.`,
+				`Balancer: ${pending.providerID}/${pending.account.alias} is ${reason}. Switching to ${account.alias}.`,
 				"warning",
 			);
 		}

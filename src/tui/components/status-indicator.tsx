@@ -1,15 +1,8 @@
 /** @jsxImportSource @opentui/solid */
 
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
-import { createSignal, onCleanup } from "solid-js";
-import { getActiveAccount, getSelectedAccount } from "../../core/accounts";
-import {
-	type ActiveSelection,
-	getBalancingEnabled,
-	resolveActiveSelection,
-} from "../../core/priority";
+import type { ActiveSelection } from "../../core/priority";
 import type { Account } from "../../core/types";
-import { getUsageSnapshot } from "../../core/usage/store";
 import type { BalancerTuiState } from "../state";
 import { formatBalancerStatus } from "../status-format";
 import { formatUsageBar } from "../usage-format";
@@ -22,46 +15,38 @@ export type BalancerStatusIndicatorProps = {
 };
 
 export function BalancerStatusIndicator(props: BalancerStatusIndicatorProps) {
-	const [selected, setSelected] = createSignal<Account | undefined>();
-	const [sessionActive, setSessionActive] = createSignal<Account | undefined>();
-	const [balancing, setBalancing] = createSignal<ActiveSelection | undefined>();
-	const [usage, setUsage] = createSignal<string | undefined>();
 	const providerID = () =>
 		typeof props.providerID === "function"
 			? props.providerID()
 			: props.providerID;
-	const refresh = () => {
+	// All reads below come from the worker-fed cache snapshot — no
+	// bun:sqlite access happens on the main/input thread here.
+	const selected = (): Account | undefined =>
+		props.state.snapshot()?.selectedAccount;
+	const sessionActive = (): Account | undefined => {
 		const currentProviderID = providerID();
-		const nextSelected = getSelectedAccount(props.state.db);
-		const nextSessionActive = currentProviderID
-			? getActiveAccount(props.state.db, currentProviderID)
-			: undefined;
-		const nextBalancing = getBalancingEnabled(props.state.db)
-			? resolveActiveSelection(props.state.db, undefined, currentProviderID)
-			: undefined;
-		const usageAccount =
-			nextBalancing?.account ?? nextSelected ?? nextSessionActive;
-		setSelected(nextSelected);
-		setSessionActive(nextSessionActive);
-		setBalancing(nextBalancing);
-		setUsage(
-			usageAccount
-				? formatUsageBar(
-						snapshotPercent(
-							getUsageSnapshot(
-								props.state.db,
-								usageAccount.providerID,
-								usageAccount.alias,
-							),
-						),
-						4,
-					)
-				: undefined,
-		);
+		if (!currentProviderID) return undefined;
+		return props.state.snapshot()?.activeAccountByProvider[currentProviderID];
 	};
-	refresh();
-	const timer = setInterval(refresh, 500);
-	onCleanup(() => clearInterval(timer));
+	const balancing = (): ActiveSelection | undefined => {
+		const snapshot = props.state.snapshot();
+		if (!snapshot?.balancingEnabled) return undefined;
+		const currentProviderID = providerID();
+		if (currentProviderID) {
+			const qualifying =
+				snapshot.qualifyingSelectionByProvider[currentProviderID];
+			if (qualifying) return qualifying;
+		}
+		return snapshot.activeSelection;
+	};
+	const usage = (): string | undefined => {
+		const snapshot = props.state.snapshot();
+		if (!snapshot) return undefined;
+		const usageAccount = balancing()?.account ?? selected() ?? sessionActive();
+		if (!usageAccount) return undefined;
+		const key = `${usageAccount.providerID}/${usageAccount.alias}`;
+		return formatUsageBar(snapshotPercent(snapshot.usageSnapshots[key]), 4);
+	};
 
 	const status = () => {
 		return formatBalancerStatus({

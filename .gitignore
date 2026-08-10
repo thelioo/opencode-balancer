@@ -19,3 +19,15 @@ node_modules
 .agents/
 .claude/
 docs/
+
+# build artifacts
+*.js
+*.js.map
+!*.test.js
+!*.spec.js
+
+# teaching/learning
+.teaching/
+
+# patch files
+*.patch

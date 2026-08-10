@@ -78,6 +78,8 @@ function createState(accounts: Account[] = []) {
 			removePendingView: (pendingID) => {
 				pendingView = pendingView.filter((pending) => pending.id !== pendingID);
 			},
+			snapshot: () => null,
+			snapshotStale: () => false,
 			version: () => 0,
 		} satisfies BalancerTuiState,
 	};

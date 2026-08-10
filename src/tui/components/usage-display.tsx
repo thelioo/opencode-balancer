@@ -1,21 +1,11 @@
 /** @jsxImportSource @opentui/solid */
 
 import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
+import { snapshotUsedPercent } from "../../core/usage/percent";
 import type { ProviderUsageSnapshot } from "../../core/usage/types";
 import { UsageBar } from "./usage-bar";
 
-export function snapshotPercent(snapshot: ProviderUsageSnapshot | undefined) {
-	if (!snapshot || snapshot.confidence === "unavailable") return undefined;
-	if (snapshot.usedPercent !== undefined) return snapshot.usedPercent;
-	if (
-		snapshot.usedTokens !== undefined &&
-		snapshot.remainingTokens !== undefined
-	) {
-		const total = snapshot.usedTokens + snapshot.remainingTokens;
-		if (total > 0) return (snapshot.usedTokens / total) * 100;
-	}
-	return undefined;
-}
+export const snapshotPercent = snapshotUsedPercent;
 
 export function snapshotLabel(snapshot: ProviderUsageSnapshot | undefined) {
 	if (!snapshot) return "usage unavailable";

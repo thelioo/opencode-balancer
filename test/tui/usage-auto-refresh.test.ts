@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { saveAccount } from "../../src/core/accounts";
+import { listAccounts, saveAccount } from "../../src/core/accounts";
 import {
 	closeBalancerDatabase,
 	openBalancerDatabase,
@@ -38,7 +38,7 @@ function createState() {
 		db,
 		refreshCount: () => refreshes,
 		state: {
-			accounts: () => [],
+			accounts: () => listAccounts(db),
 			db,
 			dispose: () => closeBalancerDatabase(dbPath),
 			events: () => [],
@@ -48,6 +48,8 @@ function createState() {
 			},
 			removeAccountView: () => {},
 			removePendingView: () => {},
+			snapshot: () => null,
+			snapshotStale: () => false,
 			version: () => 0,
 		} satisfies BalancerTuiState,
 	};
@@ -97,7 +99,12 @@ describe("usage auto refresh", () => {
 		expect(getUsageSnapshot(db, "github-copilot", "personal")?.message).toBe(
 			"usage github-copilot/personal",
 		);
-		expect(refreshCount()).toBe(2);
+		// Background refreshes are silent: true, so they no longer call the
+		// heavy synchronous state.refresh() per account (that was firing a
+		// burst of full-snapshot rebuilds on the main thread whenever
+		// several accounts' usage checks resolved close together). The
+		// worker cache picks the DB change up on its own instead.
+		expect(refreshCount()).toBe(0);
 		expect(toasts).toEqual([]);
 		autoRefresh.dispose();
 	});

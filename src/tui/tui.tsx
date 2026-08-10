@@ -6,8 +6,8 @@ import type {
 	TuiRouteCurrent,
 } from "@opencode-ai/plugin/tui";
 import { createComponent } from "solid-js";
-import { getSelectedAccount, getSelectedModel } from "../core/accounts";
-import { getBalancingEnabled, setProviderModel } from "../core/priority";
+import { getSelectedModel } from "../core/accounts";
+import { setProviderModel } from "../core/priority";
 import { activateAccount, removeAccountFromTui } from "./actions";
 import { createTuiBalancerBarSync } from "./balancer-bar-sync";
 import { openNativeConnect } from "./connect";
@@ -97,10 +97,15 @@ const tui: TuiPlugin = async (api) => {
 		applyProvider: applyNativeProviderModelAndTrack,
 		currentProvider: () => nativeProviderID ?? sessionProviderID,
 		dialogOpen: () => api.ui.dialog.open,
-		selectedProvider: () =>
-			getBalancingEnabled(state.db)
+		// Cache-backed, not a live query — this closure runs on every
+		// session_prompt_right render (including mid-stream), same reasoning
+		// as balancer-bar-sync.ts.
+		selectedProvider: () => {
+			const snapshot = state.snapshot();
+			return snapshot?.balancingEnabled
 				? undefined
-				: getSelectedAccount(state.db)?.providerID,
+				: snapshot?.selectedAccount?.providerID;
+		},
 	});
 
 	api.lifecycle.onDispose(() => {

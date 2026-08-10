@@ -1,5 +1,4 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
-import { getBalancingEnabled, resolveActiveSelection } from "../core/priority";
 import {
 	createNativeModelApplier,
 	type NativeModelApplier,
@@ -52,9 +51,15 @@ export function createTuiBalancerBarSync(
 	state: BalancerTuiState,
 ) {
 	return createBalancerBarSync({
-		activeSelection: () => resolveActiveSelection(state.db),
+		// Reads come from the worker-fed cache snapshot, not a live query.
+		// This closure runs on every session_prompt_right render (including
+		// while an LLM response is streaming), not on a poll interval, so a
+		// direct resolveActiveSelection(state.db) call here was doing the
+		// heaviest query in the codebase on the main thread on every single
+		// render tick.
+		activeSelection: () => state.snapshot()?.activeSelection,
 		apply: createNativeModelApplier(api),
-		balancingEnabled: () => getBalancingEnabled(state.db),
+		balancingEnabled: () => state.snapshot()?.balancingEnabled ?? false,
 		dialogOpen: () => api.ui.dialog.open,
 		modelTitle: (providerID, modelID) => {
 			const provider = api.state.provider.find(

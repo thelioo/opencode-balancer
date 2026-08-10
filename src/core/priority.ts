@@ -2,6 +2,7 @@ import type { Database } from "bun:sqlite";
 import { getActiveAccount, listAccounts } from "./accounts";
 import { now } from "./time";
 import type { Account } from "./types";
+import { rankByRemainingQuota } from "./usage/selection";
 
 export type PriorityEntry = {
 	providerID: string;
@@ -150,6 +151,34 @@ export function setBalancingEnabled(db: Database, enabled: boolean) {
 	).run(enabled ? "1" : "0");
 }
 
+// Defaults to on: among healthy accounts, prefer the one with the most
+// remaining quota headroom instead of picking arbitrarily (alphabetically).
+// Falls back to the old alphabetical/sticky-only behavior for any provider
+// where we don't have usage data, or when explicitly turned off.
+export function getQuotaAwareSelectionEnabled(db: Database): boolean {
+	const row = db
+		.query<{ value: string }, [string]>(
+			"SELECT value FROM settings WHERE key = ?",
+		)
+		.get("quota_aware_selection_enabled");
+
+	return row?.value !== "0";
+}
+
+export function setQuotaAwareSelectionEnabled(db: Database, enabled: boolean) {
+	db.query<unknown, [string]>(
+		`INSERT INTO settings (key, value) VALUES ('quota_aware_selection_enabled', ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+	).run(enabled ? "1" : "0");
+}
+
+// Only move off the currently active (sticky) account if another healthy
+// account has at least this many more percentage points of quota headroom.
+// Without this, two accounts with near-identical usage could flip-flop on
+// every selection as their usage snapshots refresh at slightly different
+// times, causing needless account switches (extra auth writes, TUI toasts).
+const STICKY_SWITCH_THRESHOLD_PERCENT = 15;
+
 function chooseHealthyAccount(
 	db: Database,
 	providerID: string,
@@ -163,9 +192,31 @@ function chooseHealthyAccount(
 	if (healthy.length === 0) return undefined;
 
 	const active = getActiveAccount(db, providerID);
-	if (active && healthy.some((account) => account.alias === active.alias))
-		return active;
-	return healthy[0];
+	const activeHealthy = active
+		? healthy.find((account) => account.alias === active.alias)
+		: undefined;
+
+	if (!getQuotaAwareSelectionEnabled(db)) return activeHealthy ?? healthy[0];
+
+	const ranked = rankByRemainingQuota(db, providerID, healthy);
+	const best = ranked[0];
+
+	if (activeHealthy) {
+		const activeRanked = ranked.find(
+			(entry) => entry.account.alias === activeHealthy.alias,
+		);
+		const activeRemaining = activeRanked?.remainingPercent;
+		const bestRemaining = best.remainingPercent;
+		// Stay put unless we know for certain another account has
+		// meaningfully more headroom than the one we're already using.
+		const bestIsMeaningfullyBetter =
+			activeRemaining !== undefined &&
+			bestRemaining !== undefined &&
+			bestRemaining - activeRemaining >= STICKY_SWITCH_THRESHOLD_PERCENT;
+		if (!bestIsMeaningfullyBetter) return activeHealthy;
+	}
+
+	return best.account;
 }
 
 export function resolveActiveSelection(

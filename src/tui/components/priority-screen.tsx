@@ -2,20 +2,17 @@
 
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
 import {
+	createEffect,
 	createMemo,
 	createSignal,
 	For,
 	type JSX,
-	onCleanup,
 	onMount,
 	Show,
 } from "solid-js";
 import {
-	getBalancingEnabled,
-	listProviderPriority,
 	moveProvider,
 	type PriorityEntry,
-	resolveActiveSelection,
 	setBalancingEnabled,
 	setProviderEnabled,
 } from "../../core/priority";
@@ -55,30 +52,38 @@ export function PriorityScreen(props: {
 	const selectedColors = () => selectedRowColors(theme());
 	const db = props.state.db;
 
-	const [entries, setEntries] = createSignal<PriorityEntry[]>(
-		listProviderPriority(db),
-	);
-	const [balancing, setBalancing] = createSignal(getBalancingEnabled(db));
+	// Reads come from the worker-fed cache snapshot — no bun:sqlite access
+	// happens on the main/input thread here. Writes below still go straight
+	// to `db`, followed by props.state.refresh() (write-triggered, not a
+	// timer, so it's safe — see state.ts).
+	const entries = (): PriorityEntry[] =>
+		props.state.snapshot()?.providerPriority ?? [];
+	const balancing = (): boolean =>
+		props.state.snapshot()?.balancingEnabled ?? false;
 	const compact = () =>
 		dashboardLayoutMode({
 			height: (props.api.renderer as unknown as { height?: number }).height,
 			width: (props.api.renderer as unknown as { width?: number }).width,
 		}) === "compact";
 
-	const refresh = () => {
-		const next = listProviderPriority(db);
-		setEntries(next);
-		setBalancing(getBalancingEnabled(db));
+	// Same effect as this component's old refresh(): keep the cursor in
+	// bounds when the entry list changes. The cache only pushes a new
+	// snapshot when its content actually changed (see snapshotsEqual in
+	// ./snapshot), so this doesn't fire on every poll tick.
+	createEffect(() => {
+		const next = entries();
 		setCursor((value) =>
 			Math.max(0, Math.min(value, Math.max(0, next.length - 1))),
 		);
-	};
-	refresh();
-	const timer = setInterval(refresh, 500);
-	onCleanup(() => clearInterval(timer));
+	});
 
+	// No preferred providerID here, same as the original
+	// `resolveActiveSelection(db)` call — this is exactly what the cache's
+	// top-level `activeSelection` field already represents.
 	const activeProviderID = createMemo(() =>
-		balancing() ? resolveActiveSelection(db)?.providerID : undefined,
+		balancing()
+			? props.state.snapshot()?.activeSelection?.providerID
+			: undefined,
 	);
 
 	const current = () => entries()[cursor()];
@@ -101,20 +106,20 @@ export function PriorityScreen(props: {
 
 	const toggleBalancing = () => {
 		setBalancingEnabled(db, !balancing());
-		refresh();
+		props.state.refresh();
 	};
 
 	const toggleEnabled = (entry: PriorityEntry | undefined) => {
 		if (!entry) return;
 		setProviderEnabled(db, entry.providerID, !entry.enabled);
-		refresh();
+		props.state.refresh();
 	};
 
 	const reorder = (direction: -1 | 1) => {
 		const entry = current();
 		if (!entry) return;
 		moveProvider(db, entry.providerID, direction);
-		refresh();
+		props.state.refresh();
 		setCursor((value) => clampCursor(value + direction));
 	};
 

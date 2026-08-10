@@ -9,17 +9,23 @@ function read(path: string): string {
 }
 
 describe("installation docs", () => {
-	test("recommend unversioned package entry instead of @latest", () => {
+	test("install the local checkout via file:// URL", () => {
 		const installGuide = read("INSTALL.txt");
+
+		expect(installGuide).toContain("local checkout");
+		expect(installGuide).toContain("file://<absolute-path-to-local-checkout>");
+		expect(installGuide).not.toContain(
+			"@secondstrikerss/opencode-balancer@latest",
+		);
+		expect(installGuide).not.toContain("without @latest");
+		expect(installGuide).toMatch(/Do NOT run npm install/);
+		expect(installGuide).toMatch(/Do NOT add the npm package name/);
+		expect(installGuide).toContain("bun run build");
+	});
+
+	test("README does not pin @latest", () => {
 		const readme = read("README.md");
 
-		expect(installGuide).toContain(
-			"@thelioo/opencode-balancer (without @latest)",
-		);
-		expect(installGuide).not.toContain("@thelioo/opencode-balancer@latest");
-		expect(readme).toContain(
-			"Use the package name without an explicit `@latest` tag",
-		);
 		expect(readme).not.toContain(
 			'"plugin": ["@thelioo/opencode-balancer@latest"]',
 		);
